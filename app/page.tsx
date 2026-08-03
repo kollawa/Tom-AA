@@ -124,12 +124,12 @@ function parseSabreLine(line: string): Segment | null {
   if (depDate && depT) {
     const d = new Date(depDate);
     d.setHours(depT.h, depT.m, 0, 0);
-    dep_local = format12h(d);
+    dep_local = d.toISOString().slice(0, 16).replace("T", " ");
   }
   if (arrDate && arrT) {
     const a = new Date(arrDate);
     a.setHours(arrT.h, arrT.m, 0, 0);
-    arr_local = format12h(d);
+    arr_local = a.toISOString().slice(0, 16).replace("T", " ");
     if (depDate && depT) {
       const depMs = new Date(depDate);
       depMs.setHours(depT.h, depT.m, 0, 0);
@@ -145,6 +145,12 @@ function parseSabreLine(line: string): Segment | null {
     cc, num, cls, cabin, orig, dest, dep_local, arr_local, dur,
     fare_basis: "", new_dir: false,
   };
+}
+
+function formatDisplay12(isoLocal: string): string {
+  if (!isoLocal) return "";
+  const d=new Date(isoLocal.replace(" ","T"));
+  return new Intl.DateTimeFormat("en-US",{month:"2-digit",day:"2-digit",year:"numeric",hour:"numeric",minute:"2-digit",hour12:true}).format(d);
 }
 
 function toTimestamp(isoLocal: string): number {
@@ -532,8 +538,10 @@ export default function Home() {
           <p className="text-xs text-white/30 mb-4">Paste Sabre availability / itinerary lines</p>
           <textarea
             className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
-            placeholder={`1 EI8918I 21DEC M DENLHR SS1   501P  910A  22DEC T /DCEI /E
-2 EI8919I 15FEB M LHRDEN SS1  1210P  310P /DCEI /E`}
+            placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
+2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
+3 BA 176O 30JAN J JFKLHR*GK1 705P 705A 31JAN S /DCBA /E
+4 BA 396O 31JAN S LHRCAI LL1 855A 355P /DCBA /E`}
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
@@ -594,10 +602,10 @@ export default function Home() {
                         <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dest} onChange={(e) => updateSegment(seg.id, "dest", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dep_local} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={formatDisplay12(seg.dep_local)} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.arr_local} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={formatDisplay12(seg.arr_local)} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
                       </td>
                       <td className="py-2 px-1">
                         <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dur} onChange={(e) => updateSegment(seg.id, "dur", e.target.value)} />
