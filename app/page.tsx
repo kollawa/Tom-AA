@@ -509,8 +509,19 @@ function toTimestamp(localValue: string, airport: string): number {
   return localDateTimeToAirportUtcMs(local, airport);
 }
 
-function generateAALink(segments: Segment[], pax: number): string {
+function generateAALink(segments: Segment[], groups: PassengerGroup[]): string {
   if (segments.length === 0) return "";
+
+  // Считаем количество по каждому типу пассажиров
+  const paxByCode: Record<string, number> = {};
+  let totalPax = 0;
+  for (const group of groups) {
+    const count = parseInt(group.count, 10);
+    if (Number.isFinite(count) && count > 0) {
+      paxByCode[group.code] = (paxByCode[group.code] || 0) + count;
+      totalPax += count;
+    }
+  }
 
   const directions: Segment[][] = [];
   let currentDir: Segment[] = [];
@@ -527,14 +538,19 @@ function generateAALink(segments: Segment[], pax: number): string {
   directions.forEach((dirSegs) => {
     const first = dirSegs[0];
     const last = dirSegs[dirSegs.length - 1];
-    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local, first.orig)}`);
+    cityPairs.push(
+      `#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local, first.orig)}`
+    );
   });
 
   const flights: string[] = [];
   directions.forEach((dirSegs, dirIndex) => {
     dirSegs.forEach((seg) => {
       flights.push(
-        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(seg.dep_local, seg.orig)}|${dirIndex}`
+        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(
+          seg.dep_local,
+          seg.orig
+        )}|${dirIndex}`
       );
     });
   });
@@ -543,15 +559,34 @@ function generateAALink(segments: Segment[], pax: number): string {
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const aaTripCount = directions.length + 1;
 
-  let cabinCode = "A0S0C0I0Y1L0";
+  // Определяем кабину из классов сегментов
   const classes = segments.map((s) => s.cls);
-  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
-    cabinCode = "A1S0C0I0Y0L0";
-  else if (classes.some((c) => ["W", "S"].includes(c)))
-    cabinCode = "A0S1C0I0Y0L0";
+  const hasFirst = classes.some((c) => ["F", "A", "P"].includes(c));
+  const hasBusiness = classes.some((c) => ["J", "C", "D", "I", "Z"].includes(c));
+  const hasPremium = classes.some((c) => ["W", "S"].includes(c));
 
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
-  const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
+  let cabinCode = "A0S0C0I0Y0L0";
+  if (hasFirst) {
+    cabinCode = "A1S0C0I0Y0L0";
+  } else if (hasBusiness) {
+    cabinCode = "A0S0C1I0Y0L0";
+  } else if (hasPremium) {
+    cabinCode = "A0S1C0I0Y0L0";
+  } else {
+    cabinCode = "A0S0C0I0Y1L0";
+  }
+
+  // Формируем пассажирский код: A{ADT}S{senior}C{child}I{infant_seat}Y{youth}L{infant_lap}
+  const adtCount = paxByCode["ADT"] || 0;
+  const cnnCount = paxByCode["CNN"] || 0;
+  const infCount = paxByCode["INF"] || 0;
+
+  const passengerCode = `A${adtCount}S0C${cnnCount}I${infCount}Y0L0`;
+
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${totalPax || 1},`;
+  const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(
+    flights.join("")
+  )}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
 
@@ -747,10 +782,10 @@ export default function Home() {
     return sum + (Number.isFinite(count) && count > 0 ? count : 0);
   }, 0);
 
-  const handleGenerate = () => {
-    const url = generateAALink(segments, passengerTotal || 1);
-    setGeneratedUrl(url);
-  };
+const handleGenerate = () => {
+  const url = generateAALink(segments, passengerGroups);
+  setGeneratedUrl(url);
+};
 
   // Open without exposing URL in DOM / right-click
   const handleOpenLink = () => {
