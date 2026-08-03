@@ -23,6 +23,12 @@ interface User {
   role: "admin" | "user";
 }
 
+interface PassengerGroup {
+  id: string;
+  code: string;
+  count: string;
+}
+
 interface CalendarDate {
   year: number;
   month: number;
@@ -37,6 +43,10 @@ interface LocalDateTime extends CalendarDate {
 const DEFAULT_USERS: User[] = [
   { username: "admin", password: "admin123", role: "admin" },
   { username: "agent", password: "agent123", role: "user" },
+];
+
+const DEFAULT_PASSENGER_GROUPS: PassengerGroup[] = [
+  { id: "adt", code: "ADT", count: "1" },
 ];
 
 const MONTHS: Record<string, number> = {
@@ -567,7 +577,9 @@ export default function Home() {
 
   const [rawLines, setRawLines] = useState("");
   const [segments, setSegments] = useState<Segment[]>([]);
-  const [pax, setPax] = useState("1");
+  const [passengerGroups, setPassengerGroups] = useState<PassengerGroup[]>(
+    DEFAULT_PASSENGER_GROUPS
+  );
   const [generatedUrl, setGeneratedUrl] = useState("");
 
   useEffect(() => {
@@ -671,10 +683,6 @@ export default function Home() {
     );
   };
 
-  const removeSegment = (id: string) => {
-    setSegments((prev) => prev.filter((s) => s.id !== id));
-  };
-
   const addRow = () => {
     setSegments((prev) => [
       ...prev,
@@ -687,8 +695,46 @@ export default function Home() {
     ]);
   };
 
+  const updatePassengerGroup = (
+    id: string,
+    field: keyof PassengerGroup,
+    value: string
+  ) => {
+    setPassengerGroups((prev) =>
+      prev.map((group) =>
+        group.id === id
+          ? {
+              ...group,
+              [field]:
+                field === "code"
+                  ? value.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()
+                  : value,
+            }
+          : group
+      )
+    );
+  };
+
+  const addPassengerGroup = () => {
+    setPassengerGroups((prev) => [
+      ...prev,
+      { id: Math.random().toString(36).slice(2), code: "", count: "1" },
+    ]);
+  };
+
+  const removePassengerGroup = (id: string) => {
+    setPassengerGroups((prev) =>
+      prev.length > 1 ? prev.filter((group) => group.id !== id) : prev
+    );
+  };
+
+  const passengerTotal = passengerGroups.reduce((sum, group) => {
+    const count = parseInt(group.count, 10);
+    return sum + (Number.isFinite(count) && count > 0 ? count : 0);
+  }, 0);
+
   const handleGenerate = () => {
-    const url = generateAALink(segments, parseInt(pax) || 1);
+    const url = generateAALink(segments, passengerTotal || 1);
     setGeneratedUrl(url);
   };
 
@@ -897,7 +943,7 @@ export default function Home() {
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
           <h2 className="text-sm font-medium text-white/80 mb-1">2. Segments</h2>
           <p className="text-xs text-white/30 mb-4">
-            Edit cabin, fare basis and the new direction flag
+            Edit cabin and the new direction flag
           </p>
 
           {segments.length === 0 ? (
@@ -909,7 +955,7 @@ export default function Home() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-white/30 border-b border-white/5">
-                    {["cc", "num", "cls", "cabin", "orig", "dest", "dep", "arr", "dur", "fare", "new dir", ""].map((h) => (
+                    {["cc", "num", "cls", "cabin", "orig", "dest", "dep", "arr", "new dir"].map((h) => (
                       <th key={h} className="pb-3 px-2 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">
                         {h}
                       </th>
@@ -943,17 +989,8 @@ export default function Home() {
                       <td className="py-2 px-1">
                         <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.arr_local} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
                       </td>
-                      <td className="py-2 px-1">
-                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dur} onChange={(e) => updateSegment(seg.id, "dur", e.target.value)} />
-                      </td>
-                      <td className="py-2 px-1">
-                        <input className="w-16 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.fare_basis} onChange={(e) => updateSegment(seg.id, "fare_basis", e.target.value)} />
-                      </td>
                       <td className="py-2 px-1 text-center">
                         <input type="checkbox" checked={seg.new_dir} onChange={(e) => updateSegment(seg.id, "new_dir", e.target.checked)} className="w-4 h-4 accent-red-500" />
-                      </td>
-                      <td className="py-2 px-1">
-                        <button onClick={() => removeSegment(seg.id)} className="text-white/20 hover:text-red-400 text-lg leading-none px-1 transition">?</button>
                       </td>
                     </tr>
                   ))}
@@ -971,17 +1008,55 @@ export default function Home() {
         </section>
 
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-4">3. Options</h2>
-          <div className="max-w-[140px]">
-            <label className="block text-xs text-white/40 mb-1.5">Passengers</label>
-            <input
-              type="number"
-              min={1}
-              max={9}
-              className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
-              value={pax}
-              onChange={(e) => setPax(e.target.value)}
-            />
+          <h2 className="text-sm font-medium text-white/80 mb-4">3. Passengers</h2>
+          <div className="max-w-md space-y-3">
+            {passengerGroups.map((group) => (
+              <div key={group.id} className="flex items-end gap-2">
+                <div>
+                  <label className="block text-xs text-white/40 mb-1.5">PTC</label>
+                  <input
+                    className="w-24 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    value={group.code}
+                    placeholder="ADT"
+                    onChange={(e) =>
+                      updatePassengerGroup(group.id, "code", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/40 mb-1.5">Qty</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={9}
+                    className="w-20 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    value={group.count}
+                    onChange={(e) =>
+                      updatePassengerGroup(group.id, "count", e.target.value)
+                    }
+                  />
+                </div>
+                {passengerGroups.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removePassengerGroup(group.id)}
+                    className="mb-px text-xs border border-white/10 rounded-lg px-3 py-2.5 hover:bg-white/5 transition text-white/50 hover:text-white"
+                  >
+                    remove
+                  </button>
+                )}
+              </div>
+            ))}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={addPassengerGroup}
+                className="text-xs border border-white/10 rounded-lg px-3 py-2 hover:bg-white/5 transition text-white/50 hover:text-white"
+              >
+                + add type
+              </button>
+              <span className="text-xs text-white/30">total {passengerTotal || 1}</span>
+            </div>
           </div>
         </section>
 
