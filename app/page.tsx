@@ -2,6 +2,15 @@
 
 import { useState, useCallback, useEffect } from "react";
 
+function format12h(d: Date): string {
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 interface Segment {
   id: string;
   cc: string;
@@ -124,12 +133,12 @@ function parseSabreLine(line: string): Segment | null {
   if (depDate && depT) {
     const d = new Date(depDate);
     d.setHours(depT.h, depT.m, 0, 0);
-    dep_local = d.toISOString().slice(0, 16).replace("T", " ");
+    dep_local = `${depDateStr} ${format12h(d)}`;
   }
   if (arrDate && arrT) {
     const a = new Date(arrDate);
     a.setHours(arrT.h, arrT.m, 0, 0);
-    arr_local = a.toISOString().slice(0, 16).replace("T", " ");
+    arr_local = `${arrDateStr} ${format12h(a)}`;
     if (depDate && depT) {
       const depMs = new Date(depDate);
       depMs.setHours(depT.h, depT.m, 0, 0);
@@ -145,12 +154,6 @@ function parseSabreLine(line: string): Segment | null {
     cc, num, cls, cabin, orig, dest, dep_local, arr_local, dur,
     fare_basis: "", new_dir: false,
   };
-}
-
-function formatDisplay12(isoLocal: string): string {
-  if (!isoLocal) return "";
-  const d=new Date(isoLocal.replace(" ","T"));
-  return new Intl.DateTimeFormat("en-US",{month:"2-digit",day:"2-digit",year:"numeric",hour:"numeric",minute:"2-digit",hour12:true}).format(d);
 }
 
 function toTimestamp(isoLocal: string): number {
@@ -602,10 +605,10 @@ export default function Home() {
                         <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dest} onChange={(e) => updateSegment(seg.id, "dest", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={formatDisplay12(seg.dep_local)} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dep_local} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={formatDisplay12(seg.arr_local)} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.arr_local} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
                       </td>
                       <td className="py-2 px-1">
                         <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dur} onChange={(e) => updateSegment(seg.id, "dur", e.target.value)} />
