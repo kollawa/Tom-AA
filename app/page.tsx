@@ -23,6 +23,17 @@ interface User {
   role: "admin" | "user";
 }
 
+interface CalendarDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
+interface LocalDateTime extends CalendarDate {
+  hour: number;
+  minute: number;
+}
+
 const DEFAULT_USERS: User[] = [
   { username: "admin", password: "admin123", role: "admin" },
   { username: "agent", password: "agent123", role: "user" },
@@ -33,18 +44,193 @@ const MONTHS: Record<string, number> = {
   JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
 };
 
+const AIRPORT_TIME_ZONES: Record<string, string> = {
+  AEP: "America/Argentina/Buenos_Aires",
+  AKL: "Pacific/Auckland",
+  ANC: "America/Anchorage",
+  ANU: "America/Antigua",
+  ARN: "Europe/Stockholm",
+  ASU: "America/Asuncion",
+  ATH: "Europe/Athens",
+  ATL: "America/New_York",
+  AUH: "Asia/Dubai",
+  AUA: "America/Aruba",
+  AUS: "America/Chicago",
+  BCN: "Europe/Madrid",
+  BER: "Europe/Berlin",
+  BGI: "America/Barbados",
+  BJX: "America/Mexico_City",
+  BKK: "Asia/Bangkok",
+  BLR: "Asia/Kolkata",
+  BNA: "America/Chicago",
+  BOG: "America/Bogota",
+  BOM: "Asia/Kolkata",
+  BOS: "America/New_York",
+  BQN: "America/Puerto_Rico",
+  BSB: "America/Sao_Paulo",
+  BWI: "America/New_York",
+  BZE: "America/Belize",
+  CAN: "Asia/Shanghai",
+  CDG: "Europe/Paris",
+  CGK: "Asia/Jakarta",
+  CLE: "America/New_York",
+  CLO: "America/Bogota",
+  CLT: "America/New_York",
+  CMH: "America/New_York",
+  CNF: "America/Sao_Paulo",
+  CPH: "Europe/Copenhagen",
+  CUN: "America/Cancun",
+  CUR: "America/Curacao",
+  CVG: "America/New_York",
+  CZM: "America/Cancun",
+  DAL: "America/Chicago",
+  DCA: "America/New_York",
+  DEL: "Asia/Kolkata",
+  DEN: "America/Denver",
+  DFW: "America/Chicago",
+  DOH: "Asia/Qatar",
+  DUB: "Europe/Dublin",
+  DUS: "Europe/Berlin",
+  DXB: "Asia/Dubai",
+  EWR: "America/New_York",
+  EZE: "America/Argentina/Buenos_Aires",
+  FCO: "Europe/Rome",
+  FRA: "Europe/Berlin",
+  FLL: "America/New_York",
+  GCM: "America/Cayman",
+  GDL: "America/Mexico_City",
+  GIG: "America/Sao_Paulo",
+  GUA: "America/Guatemala",
+  GVA: "Europe/Zurich",
+  GYE: "America/Guayaquil",
+  HAM: "Europe/Berlin",
+  HEL: "Europe/Helsinki",
+  HKG: "Asia/Hong_Kong",
+  HNL: "Pacific/Honolulu",
+  HOU: "America/Chicago",
+  IAD: "America/New_York",
+  IAH: "America/Chicago",
+  ICN: "Asia/Seoul",
+  IND: "America/Indiana/Indianapolis",
+  IST: "Europe/Istanbul",
+  JFK: "America/New_York",
+  KIN: "America/Jamaica",
+  KIX: "Asia/Tokyo",
+  KOA: "Pacific/Honolulu",
+  KUL: "Asia/Kuala_Lumpur",
+  LAS: "America/Los_Angeles",
+  LAX: "America/Los_Angeles",
+  LCY: "Europe/London",
+  LGA: "America/New_York",
+  LGW: "Europe/London",
+  LIH: "Pacific/Honolulu",
+  LIM: "America/Lima",
+  LIN: "Europe/Rome",
+  LIR: "America/Costa_Rica",
+  LIS: "Europe/Lisbon",
+  LHR: "Europe/London",
+  MAD: "Europe/Madrid",
+  MAN: "Europe/London",
+  MAO: "America/Manaus",
+  MBJ: "America/Jamaica",
+  MCO: "America/New_York",
+  MDE: "America/Bogota",
+  MEL: "Australia/Melbourne",
+  MEX: "America/Mexico_City",
+  MIA: "America/New_York",
+  MID: "America/Merida",
+  MKE: "America/Chicago",
+  MNL: "Asia/Manila",
+  MSP: "America/Chicago",
+  MTY: "America/Monterrey",
+  MUC: "Europe/Berlin",
+  MVD: "America/Montevideo",
+  MXP: "Europe/Rome",
+  NAP: "Europe/Rome",
+  NAS: "America/Nassau",
+  NRT: "Asia/Tokyo",
+  OAK: "America/Los_Angeles",
+  OGG: "Pacific/Honolulu",
+  ONT: "America/Los_Angeles",
+  OPO: "Europe/Lisbon",
+  ORD: "America/Chicago",
+  ORY: "Europe/Paris",
+  OSL: "Europe/Oslo",
+  OAX: "America/Mexico_City",
+  PDX: "America/Los_Angeles",
+  PEK: "Asia/Shanghai",
+  PHL: "America/New_York",
+  PHX: "America/Phoenix",
+  PIT: "America/New_York",
+  POP: "America/Santo_Domingo",
+  PRG: "Europe/Prague",
+  PTY: "America/Panama",
+  PUJ: "America/Santo_Domingo",
+  PVR: "America/Mexico_City",
+  PVG: "Asia/Shanghai",
+  QRO: "America/Mexico_City",
+  RDU: "America/New_York",
+  RNO: "America/Los_Angeles",
+  SAL: "America/El_Salvador",
+  SAN: "America/Los_Angeles",
+  SAT: "America/Chicago",
+  SCL: "America/Santiago",
+  SEA: "America/Los_Angeles",
+  SFO: "America/Los_Angeles",
+  SHA: "Asia/Shanghai",
+  SIN: "Asia/Singapore",
+  SJC: "America/Los_Angeles",
+  SJD: "America/Mazatlan",
+  SJO: "America/Costa_Rica",
+  SJU: "America/Puerto_Rico",
+  SLC: "America/Denver",
+  SMF: "America/Los_Angeles",
+  SNA: "America/Los_Angeles",
+  SNN: "Europe/Dublin",
+  STI: "America/Santo_Domingo",
+  STL: "America/Chicago",
+  SDQ: "America/Santo_Domingo",
+  SXM: "America/Lower_Princes",
+  SYD: "Australia/Sydney",
+  TGU: "America/Tegucigalpa",
+  TLV: "Asia/Jerusalem",
+  TPA: "America/New_York",
+  TPE: "Asia/Taipei",
+  UIO: "America/Guayaquil",
+  UVF: "America/St_Lucia",
+  VCE: "Europe/Rome",
+  VIE: "Europe/Vienna",
+  WAW: "Europe/Warsaw",
+  YEG: "America/Edmonton",
+  YHZ: "America/Halifax",
+  YOW: "America/Toronto",
+  YUL: "America/Toronto",
+  YVR: "America/Vancouver",
+  YWG: "America/Winnipeg",
+  YYC: "America/Edmonton",
+  YYZ: "America/Toronto",
+  ZRH: "Europe/Zurich",
+};
+
+const timeZoneFormatters: Record<string, Intl.DateTimeFormat> = {};
+
+function pad(n: number, len = 2) {
+  return n.toString().padStart(len, "0");
+}
+
 function parseTime(t: string): { h: number; m: number } | null {
   const m = t.match(/^(\d{1,2})(\d{2})([AP])$/i);
   if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = parseInt(m[2], 10);
   const ap = m[3].toUpperCase();
+  if (h < 1 || h > 12 || min < 0 || min > 59) return null;
   if (ap === "P" && h !== 12) h += 12;
   if (ap === "A" && h === 12) h = 0;
   return { h, m: min };
 }
 
-function parseDate(d: string, yearHint?: number): Date | null {
+function parseDate(d: string, yearHint?: number): CalendarDate | null {
   const m = d.match(/^(\d{1,2})([A-Z]{3})$/i);
   if (!m) return null;
   const day = parseInt(m[1], 10);
@@ -52,9 +238,152 @@ function parseDate(d: string, yearHint?: number): Date | null {
   if (mon === undefined) return null;
   const now = new Date();
   let year = yearHint ?? now.getFullYear();
-  const candidate = new Date(year, mon, day);
-  if (!yearHint && candidate < now) year += 1;
-  return new Date(year, mon, day);
+  const candidate = Date.UTC(year, mon, day);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!yearHint && candidate < today) year += 1;
+  return { year, month: mon, day };
+}
+
+function addDays(local: LocalDateTime, days: number): LocalDateTime {
+  const d = new Date(Date.UTC(local.year, local.month, local.day + days));
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth(),
+    day: d.getUTCDate(),
+    hour: local.hour,
+    minute: local.minute,
+  };
+}
+
+function addYear(date: CalendarDate): CalendarDate {
+  return { ...date, year: date.year + 1 };
+}
+
+function dateKey(date: CalendarDate): number {
+  return Date.UTC(date.year, date.month, date.day);
+}
+
+function localComparableMs(local: LocalDateTime): number {
+  return Date.UTC(local.year, local.month, local.day, local.hour, local.minute);
+}
+
+function combineDateTime(date: CalendarDate, time: { h: number; m: number }): LocalDateTime {
+  return {
+    year: date.year,
+    month: date.month,
+    day: date.day,
+    hour: time.h,
+    minute: time.m,
+  };
+}
+
+function formatDisplayDateTime(local: LocalDateTime): string {
+  const ap = local.hour >= 12 ? "PM" : "AM";
+  const h12 = local.hour % 12 || 12;
+  return `${pad(local.month + 1)}/${pad(local.day)}/${local.year} ${pad(h12)}:${pad(local.minute)} ${ap}`;
+}
+
+function parseDisplayDateTime(value: string): LocalDateTime | null {
+  const trimmed = value.trim();
+
+  const internal = trimmed.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})/
+  );
+  if (internal) {
+    return {
+      year: Number(internal[1]),
+      month: Number(internal[2]) - 1,
+      day: Number(internal[3]),
+      hour: Number(internal[4]),
+      minute: Number(internal[5]),
+    };
+  }
+
+  const display = trimmed.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP])M?$/i
+  );
+  if (!display) return null;
+
+  let hour = Number(display[4]);
+  const minute = Number(display[5]);
+  const ap = display[6].toUpperCase();
+  if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+  if (ap === "P" && hour !== 12) hour += 12;
+  if (ap === "A" && hour === 12) hour = 0;
+
+  return {
+    year: Number(display[3]),
+    month: Number(display[1]) - 1,
+    day: Number(display[2]),
+    hour,
+    minute,
+  };
+}
+
+function getAirportTimeZone(iata: string): string {
+  return AIRPORT_TIME_ZONES[iata.trim().toUpperCase()] || "UTC";
+}
+
+function getTimeZoneFormatter(timeZone: string): Intl.DateTimeFormat {
+  if (!timeZoneFormatters[timeZone]) {
+    timeZoneFormatters[timeZone] = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
+  return timeZoneFormatters[timeZone];
+}
+
+function getTimeZoneOffsetMs(timeZone: string, utcMs: number): number {
+  try {
+    const parts = getTimeZoneFormatter(timeZone).formatToParts(new Date(utcMs));
+    const values: Record<string, number> = {};
+    for (const part of parts) {
+      if (part.type !== "literal") values[part.type] = Number(part.value);
+    }
+    const asUtc = Date.UTC(
+      values.year,
+      values.month - 1,
+      values.day,
+      values.hour,
+      values.minute,
+      values.second || 0
+    );
+    return asUtc - utcMs;
+  } catch {
+    return 0;
+  }
+}
+
+function localDateTimeToAirportUtcMs(local: LocalDateTime, airport: string): number {
+  const timeZone = getAirportTimeZone(airport);
+  const wallClockUtcMs = localComparableMs(local);
+  let utcMs = wallClockUtcMs;
+
+  for (let i = 0; i < 3; i++) {
+    const nextUtcMs = wallClockUtcMs - getTimeZoneOffsetMs(timeZone, utcMs);
+    if (Math.abs(nextUtcMs - utcMs) < 1) return nextUtcMs;
+    utcMs = nextUtcMs;
+  }
+
+  return utcMs;
+}
+
+function calculateDurationMinutes(
+  depLocal: LocalDateTime,
+  arrLocal: LocalDateTime,
+  orig: string,
+  dest: string
+): number {
+  const depMs = localDateTimeToAirportUtcMs(depLocal, orig);
+  const arrMs = localDateTimeToAirportUtcMs(arrLocal, dest);
+  return Math.round((arrMs - depMs) / 60000);
 }
 
 function parseSabreLine(line: string): Segment | null {
@@ -100,6 +429,7 @@ function parseSabreLine(line: string): Segment | null {
 
   let arrDateStr = depDateStr;
   const nextDateMatch = rest.match(/^(\d{1,2}[A-Z]{3})/i);
+  const hasExplicitArrDate = Boolean(nextDateMatch);
   if (nextDateMatch) arrDateStr = nextDateMatch[1].toUpperCase();
 
   const cabinMap: Record<string, string> = {
@@ -113,7 +443,10 @@ function parseSabreLine(line: string): Segment | null {
   const cabin = cabinMap[cls] || "ECON";
 
   const depDate = parseDate(depDateStr);
-  const arrDate = parseDate(arrDateStr, depDate?.getFullYear());
+  let arrDate = parseDate(arrDateStr, depDate?.year);
+  if (depDate && arrDate && hasExplicitArrDate && dateKey(arrDate) < dateKey(depDate)) {
+    arrDate = addYear(arrDate);
+  }
   const depT = parseTime(depTimeStr);
   const arrT = parseTime(arrTimeStr);
 
@@ -122,21 +455,25 @@ function parseSabreLine(line: string): Segment | null {
   let dur = "";
 
   if (depDate && depT) {
-    const d = new Date(depDate);
-    d.setHours(depT.h, depT.m, 0, 0);
-    dep_local = d.toISOString().slice(0, 16).replace("T", " ");
+    dep_local = formatDisplayDateTime(combineDateTime(depDate, depT));
   }
   if (arrDate && arrT) {
-    const a = new Date(arrDate);
-    a.setHours(arrT.h, arrT.m, 0, 0);
-    arr_local = a.toISOString().slice(0, 16).replace("T", " ");
     if (depDate && depT) {
-      const depMs = new Date(depDate);
-      depMs.setHours(depT.h, depT.m, 0, 0);
-      const arrMs = new Date(arrDate);
-      arrMs.setHours(arrT.h, arrT.m, 0, 0);
-      const mins = Math.round((arrMs.getTime() - depMs.getTime()) / 60000);
+      const depLocal = combineDateTime(depDate, depT);
+      let arrLocal = combineDateTime(arrDate, arrT);
+      let mins = calculateDurationMinutes(depLocal, arrLocal, orig, dest);
+      let guard = 0;
+
+      while (mins <= 0 && guard < 3) {
+        arrLocal = addDays(arrLocal, 1);
+        mins = calculateDurationMinutes(depLocal, arrLocal, orig, dest);
+        guard += 1;
+      }
+
+      arr_local = formatDisplayDateTime(arrLocal);
       if (mins > 0) dur = String(mins);
+    } else {
+      arr_local = formatDisplayDateTime(combineDateTime(arrDate, arrT));
     }
   }
 
@@ -147,11 +484,10 @@ function parseSabreLine(line: string): Segment | null {
   };
 }
 
-function toTimestamp(isoLocal: string): number {
-  if (!isoLocal) return 0;
-  const normalized = isoLocal.trim().replace(" ", "T");
-  const withSec = normalized.length === 16 ? normalized + ":00" : normalized;
-  return new Date(withSec + "Z").getTime();
+function toTimestamp(localValue: string, airport: string): number {
+  const local = parseDisplayDateTime(localValue);
+  if (!local) return 0;
+  return localDateTimeToAirportUtcMs(local, airport);
 }
 
 function generateAALink(segments: Segment[], pax: number): string {
@@ -172,21 +508,21 @@ function generateAALink(segments: Segment[], pax: number): string {
   directions.forEach((dirSegs) => {
     const first = dirSegs[0];
     const last = dirSegs[dirSegs.length - 1];
-    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local)}`);
+    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local, first.orig)}`);
   });
 
   const flights: string[] = [];
   directions.forEach((dirSegs, dirIndex) => {
     dirSegs.forEach((seg) => {
       flights.push(
-        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(seg.dep_local)}|${dirIndex}`
+        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(seg.dep_local, seg.orig)}|${dirIndex}`
       );
     });
   });
 
   const firstSeg = segments[0];
   const lastOfFirstDir = directions[0][directions[0].length - 1];
-  const numSeg = segments.length;
+  const aaTripCount = directions.length + 1;
 
   let cabinCode = "A0S0C0I0Y1L0";
   const classes = segments.map((s) => s.cls);
@@ -195,7 +531,7 @@ function generateAALink(segments: Segment[], pax: number): string {
   else if (classes.some((c) => ["W", "S"].includes(c)))
     cabinCode = "A0S1C0I0Y0L0";
 
-  const header = `GOOGLE,0,US,multi,${numSeg},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
@@ -314,10 +650,16 @@ export default function Home() {
       if (seg) parsed.push(seg);
     }
     for (let i = 1; i < parsed.length; i++) {
-      const prev = new Date(parsed[i - 1].dep_local);
-      const curr = new Date(parsed[i].dep_local);
-      const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 3600 * 24);
-      if (diffDays > 5) parsed[i].new_dir = true;
+      const prev = parsed[i - 1];
+      const curr = parsed[i];
+      const prevDep = parseDisplayDateTime(prev.dep_local);
+      const currDep = parseDisplayDateTime(curr.dep_local);
+      const diffDays =
+        prevDep && currDep
+          ? (localComparableMs(currDep) - localComparableMs(prevDep)) / (1000 * 3600 * 24)
+          : 0;
+
+      if (prev.dest !== curr.orig || diffDays > 5) parsed[i].new_dir = true;
     }
     setSegments(parsed);
     setGeneratedUrl("");
@@ -611,7 +953,7 @@ export default function Home() {
                         <input type="checkbox" checked={seg.new_dir} onChange={(e) => updateSegment(seg.id, "new_dir", e.target.checked)} className="w-4 h-4 accent-red-500" />
                       </td>
                       <td className="py-2 px-1">
-                        <button onClick={() => removeSegment(seg.id)} className="text-white/20 hover:text-red-400 text-lg leading-none px-1 transition">×</button>
+                        <button onClick={() => removeSegment(seg.id)} className="text-white/20 hover:text-red-400 text-lg leading-none px-1 transition">?</button>
                       </td>
                     </tr>
                   ))}
