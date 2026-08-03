@@ -144,7 +144,9 @@ function parseSabreLine(line: string): Segment | null {
       depMs.setHours(depT.h, depT.m, 0, 0);
       const arrMs = new Date(arrDate);
       arrMs.setHours(arrT.h, arrT.m, 0, 0);
-      const mins = Math.round((arrMs.getTime() - depMs.getTime()) / 60000);
+      // Calculate duration using local airport times only (no UTC conversion)
+      let mins = Math.round((arrMs.getTime() - depMs.getTime()) / 60000);
+      if (mins < 0) mins += 24 * 60;
       if (mins > 0) dur = String(mins);
     }
   }
@@ -156,11 +158,38 @@ function parseSabreLine(line: string): Segment | null {
   };
 }
 
-function toTimestamp(isoLocal: string): number {
-  if (!isoLocal) return 0;
-  const normalized = isoLocal.trim().replace(" ", "T");
-  const withSec = normalized.length === 16 ? normalized + ":00" : normalized;
-  return new Date(withSec + "Z").getTime();
+function toTimestamp(localStr: string): number {
+  if (!localStr) return 0;
+
+  // SABRE format: 21DEC 5:01 PM
+  const m = localStr.trim().match(/(\\d{1,2})([A-Z]{3})\\s+(\\d{1,2}):(\\d{2})\\s+(AM|PM)/i);
+
+  if (m) {
+    const months: Record<string, number> = {
+      JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,
+      JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11
+    };
+
+    const day = Number(m[1]);
+    const month = months[m[2].toUpperCase()];
+    let hour = Number(m[3]);
+    const minute = Number(m[4]);
+    const ampm = m[5].toUpperCase();
+
+    if (ampm === "PM" && hour !== 12) hour += 12;
+    if (ampm === "AM" && hour === 12) hour = 0;
+
+    return new Date(
+      new Date().getFullYear(),
+      month,
+      day,
+      hour,
+      minute,
+      0
+    ).getTime();
+  }
+
+  return 0;
 }
 
 function generateAALink(segments: Segment[], pax: number): string {
