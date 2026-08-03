@@ -58,7 +58,14 @@ function parseDate(d: string, yearHint?: number): Date | null {
 }
 
 function parseSabreLine(line: string): Segment | null {
+  // Supports:
+  // AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
+  // AA2305I 31DEC Q CLTDEN*SS2 ...
+  // BA 176O 30JAN J JFKLHR*HK2 705P 705A 31JAN S /DCBA /E
+  // with or without *, any status: SS, HK, GK, LL, UC, HX, NN, HL, etc.
+
   const cleaned = line.trim().replace(/^\d+\s+/, "");
+
   const flightMatch = cleaned.match(/^([A-Z0-9]{2})\s*(\d{1,4})([A-Z])/i);
   if (!flightMatch) return null;
 
@@ -70,9 +77,16 @@ function parseSabreLine(line: string): Segment | null {
   const dateMatch = rest.match(/^(\d{1,2}[A-Z]{3})/i);
   if (!dateMatch) return null;
   const depDateStr = dateMatch[1].toUpperCase();
-  rest = rest.slice(dateMatch[0].length).trim().replace(/^[A-Z]\s+/, "");
+  rest = rest.slice(dateMatch[0].length).trim();
 
-  const cityMatch = rest.match(/^([A-Z]{3})([A-Z]{3})\*?[A-Z]{0,2}\d*/i);
+  // optional day-of-week letter
+  rest = rest.replace(/^[A-Z]\s+/, "");
+
+  // City pair + optional * + status (SS/HK/GK/LL/UC/HX/NN/HL/...) + optional seats digit
+  // Examples: MUCCLT*SS2  MUCCLTSS2  MUCCLT*HK1  JFKLHR*GK  LHRCAI HK2
+  const cityMatch = rest.match(
+    /^([A-Z]{3})([A-Z]{3})(?:\s*\*?\s*([A-Z]{2})\d*)?/i
+  );
   if (!cityMatch) return null;
   const orig = cityMatch[1].toUpperCase();
   const dest = cityMatch[2].toUpperCase();
@@ -248,7 +262,7 @@ export default function Home() {
       setLoginUser("");
       setLoginPass("");
     } else {
-      setLoginError("Неверный логин или пароль");
+      setLoginError("Invalid username or password");
     }
   };
 
@@ -261,7 +275,7 @@ export default function Home() {
   const addUser = () => {
     if (!newUsername.trim() || !newPassword.trim()) return;
     if (users.some((u) => u.username === newUsername.trim())) {
-      alert("Такой пользователь уже есть");
+      alert("User already exists");
       return;
     }
     const updated = [
@@ -277,12 +291,12 @@ export default function Home() {
 
   const removeUser = (username: string) => {
     if (username === currentUser?.username) {
-      alert("Нельзя удалить текущего пользователя");
+      alert("Cannot remove the current user");
       return;
     }
     const updated = users.filter((u) => u.username !== username);
     if (updated.length === 0) {
-      alert("Должен остаться хотя бы один пользователь");
+      alert("At least one user is required");
       return;
     }
     setUsers(updated);
@@ -336,7 +350,16 @@ export default function Home() {
     setGeneratedUrl(url);
   };
 
-  // ——— Loading ———
+  // Open without exposing URL in DOM / right-click
+  const handleOpenLink = () => {
+    if (!generatedUrl) return;
+    const w = window.open("about:blank", "_blank");
+    if (w) {
+      w.opener = null;
+      w.location.replace(generatedUrl);
+    }
+  };
+
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center">
@@ -345,7 +368,6 @@ export default function Home() {
     );
   }
 
-  // ——— Login screen ———
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center p-4 relative overflow-hidden">
@@ -361,12 +383,12 @@ export default function Home() {
                 </svg>
               </div>
               <h1 className="text-2xl font-semibold text-white tracking-tight">GDS Linker</h1>
-              <p className="text-sm text-white/40 mt-1">Войдите, чтобы продолжить</p>
+              <p className="text-sm text-white/40 mt-1">Sign in to continue</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Логин</label>
+                <label className="block text-xs font-medium text-white/50 mb-1.5">Username</label>
                 <input
                   type="text"
                   value={loginUser}
@@ -377,7 +399,7 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5">Пароль</label>
+                <label className="block text-xs font-medium text-white/50 mb-1.5">Password</label>
                 <input
                   type="password"
                   value={loginPass}
@@ -393,23 +415,17 @@ export default function Home() {
                 type="submit"
                 className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-red-500/20"
               >
-                Войти
+                Sign in
               </button>
             </form>
-
-            <p className="text-[11px] text-white/20 text-center mt-6">
-              @kollawa
-            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  // ——— Main app ———
   return (
     <div className="min-h-screen bg-[#0c0c0f] text-white">
-      {/* Header */}
       <header className="border-b border-white/5 bg-white/[0.02] backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -432,24 +448,23 @@ export default function Home() {
                 onClick={() => setShowUsers(!showUsers)}
                 className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition text-white/60 hover:text-white"
               >
-                Пользователи
+                Users
               </button>
             )}
             <button
               onClick={handleLogout}
               className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition text-white/60 hover:text-white"
             >
-              Выйти
+              Sign out
             </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-        {/* Users panel (admin only) */}
         {showUsers && currentUser.role === "admin" && (
           <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-            <h2 className="text-sm font-medium text-white/80 mb-4">Управление пользователями</h2>
+            <h2 className="text-sm font-medium text-white/80 mb-4">User management</h2>
             <div className="space-y-2 mb-5">
               {users.map((u) => (
                 <div
@@ -466,14 +481,14 @@ export default function Home() {
                     onClick={() => removeUser(u.username)}
                     className="text-xs text-white/30 hover:text-red-400 transition"
                   >
-                    удалить
+                    remove
                   </button>
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap gap-2 items-end">
               <div>
-                <label className="block text-[10px] text-white/40 mb-1">Логин</label>
+                <label className="block text-[10px] text-white/40 mb-1">Username</label>
                 <input
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
@@ -482,7 +497,7 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] text-white/40 mb-1">Пароль</label>
+                <label className="block text-[10px] text-white/40 mb-1">Password</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -492,7 +507,7 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className="block text-[10px] text-white/40 mb-1">Роль</label>
+                <label className="block text-[10px] text-white/40 mb-1">Role</label>
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as "admin" | "user")}
@@ -506,22 +521,21 @@ export default function Home() {
                 onClick={addUser}
                 className="bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-lg transition"
               >
-                Добавить
+                Add
               </button>
             </div>
           </section>
         )}
 
-        {/* 1. Paste */}
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-1">1. GDS строки</h2>
-          <p className="text-xs text-white/30 mb-4">Вставьте availability / itinerary линии из Sabre</p>
+          <h2 className="text-sm font-medium text-white/80 mb-1">1. GDS lines</h2>
+          <p className="text-xs text-white/30 mb-4">Paste Sabre availability / itinerary lines</p>
           <textarea
             className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
             placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
-2 AA2305I 31DEC Q CLTDEN*SS2 456P 635P /DCAA /E
-3 BA 176O 30JAN J JFKLHR*SS2 705P 705A 31JAN S /DCBA /E
-4 BA 396O 31JAN S LHRCAI*SS2 855A 355P /DCBA /E`}
+2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
+3 BA 176O 30JAN J JFKLHR*GK1 705P 705A 31JAN S /DCBA /E
+4 BA 396O 31JAN S LHRCAI LL1 855A 355P /DCBA /E`}
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
@@ -533,21 +547,20 @@ export default function Home() {
               Parse
             </button>
             <span className="text-xs text-white/30">
-              {segments.length > 0 ? `${segments.length} сегмент(ов)` : "нет сегментов"}
+              {segments.length > 0 ? `${segments.length} segment(s)` : "no segments"}
             </span>
           </div>
         </section>
 
-        {/* 2. Segments */}
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-1">2. Сегменты</h2>
+          <h2 className="text-sm font-medium text-white/80 mb-1">2. Segments</h2>
           <p className="text-xs text-white/30 mb-4">
-            Редактируйте cabin, fare basis и флаг new dir
+            Edit cabin, fare basis and the new direction flag
           </p>
 
           {segments.length === 0 ? (
             <div className="text-center py-10 text-white/20 text-sm">
-              Сначала вставьте и распарсьте строки
+              Paste and parse lines first
             </div>
           ) : (
             <div className="overflow-x-auto -mx-2">
@@ -611,15 +624,14 @@ export default function Home() {
             onClick={addRow}
             className="mt-4 text-xs border border-white/10 rounded-lg px-3 py-2 hover:bg-white/5 transition text-white/50 hover:text-white"
           >
-            + добавить строку
+            + add row
           </button>
         </section>
 
-        {/* 3. Options — only passengers */}
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-4">3. Параметры</h2>
+          <h2 className="text-sm font-medium text-white/80 mb-4">3. Options</h2>
           <div className="max-w-[140px]">
-            <label className="block text-xs text-white/40 mb-1.5">Пассажиры</label>
+            <label className="block text-xs text-white/40 mb-1.5">Passengers</label>
             <input
               type="number"
               min={1}
@@ -631,9 +643,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4. Generate */}
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-4">4. Генерация</h2>
+          <h2 className="text-sm font-medium text-white/80 mb-4">4. Generate</h2>
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleGenerate}
@@ -644,17 +655,21 @@ export default function Home() {
             </button>
 
             {generatedUrl && (
-              <a
-                href={generatedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white text-black hover:bg-white/90 px-5 py-2.5 rounded-xl text-sm font-medium transition"
+              <button
+                type="button"
+                onClick={handleOpenLink}
+                onContextMenu={(e) => e.preventDefault()}
+                onMouseDown={(e) => {
+                  if (e.button === 2) e.preventDefault();
+                }}
+                className="inline-flex items-center gap-2 bg-white text-black hover:bg-white/90 px-5 py-2.5 rounded-xl text-sm font-medium transition select-none"
+                style={{ userSelect: "none", WebkitUserSelect: "none" }}
               >
                 Open link
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
-              </a>
+              </button>
             )}
           </div>
         </section>
