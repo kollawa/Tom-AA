@@ -398,7 +398,7 @@ export default function Home() {
             </form>
 
             <p className="text-[11px] text-white/20 text-center mt-6">
-              По умолчанию: admin / admin123
+              @kollawa
             </p>
           </div>
         </div>
