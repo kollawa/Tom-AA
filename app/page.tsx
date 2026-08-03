@@ -227,6 +227,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YYC: "America/Edmonton",
   YYZ: "America/Toronto",
   ZRH: "Europe/Zurich",
+  CAI: "Africa/Cairo",
   BZN:  "America/Bozeman",
 };
 
