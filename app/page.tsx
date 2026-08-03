@@ -532,10 +532,8 @@ export default function Home() {
           <p className="text-xs text-white/30 mb-4">Paste Sabre availability / itinerary lines</p>
           <textarea
             className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
-            placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
-2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
-3 BA 176O 30JAN J JFKLHR*GK1 705P 705A 31JAN S /DCBA /E
-4 BA 396O 31JAN S LHRCAI LL1 855A 355P /DCBA /E`}
+            placeholder={`1 EI8918I 21DEC M DENLHR SS1   501P  910A  22DEC T /DCEI /E
+2 EI8919I 15FEB M LHRDEN SS1  1210P  310P /DCEI /E`}
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
