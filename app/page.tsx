@@ -124,12 +124,12 @@ function parseSabreLine(line: string): Segment | null {
   if (depDate && depT) {
     const d = new Date(depDate);
     d.setHours(depT.h, depT.m, 0, 0);
-    dep_local = d.toISOString().slice(0, 16).replace("T", " ");
+    dep_local = format12h(d);
   }
   if (arrDate && arrT) {
     const a = new Date(arrDate);
     a.setHours(arrT.h, arrT.m, 0, 0);
-    arr_local = a.toISOString().slice(0, 16).replace("T", " ");
+    arr_local = format12h(d);
     if (depDate && depT) {
       const depMs = new Date(depDate);
       depMs.setHours(depT.h, depT.m, 0, 0);
