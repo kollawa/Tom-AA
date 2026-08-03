@@ -45,6 +45,12 @@ const DEFAULT_USERS: User[] = [
   { username: "agent", password: "agent123", role: "user" },
 ];
 
+const PASSENGER_TYPE_OPTIONS = [
+  { code: "ADT", label: "Adult" },
+  { code: "CNN", label: "Child" },
+  { code: "INF", label: "Infant" },
+];
+
 const DEFAULT_PASSENGER_GROUPS: PassengerGroup[] = [
   { id: "adt", code: "ADT", count: "1" },
 ];
@@ -716,9 +722,14 @@ export default function Home() {
   };
 
   const addPassengerGroup = () => {
+    const usedCodes = new Set(passengerGroups.map((group) => group.code));
+    const nextType =
+      PASSENGER_TYPE_OPTIONS.find((option) => !usedCodes.has(option.code)) ||
+      PASSENGER_TYPE_OPTIONS[0];
+
     setPassengerGroups((prev) => [
       ...prev,
-      { id: Math.random().toString(36).slice(2), code: "", count: "1" },
+      { id: Math.random().toString(36).slice(2), code: nextType.code, count: "1" },
     ]);
   };
 
@@ -1013,18 +1024,23 @@ export default function Home() {
             {passengerGroups.map((group) => (
               <div key={group.id} className="flex items-end gap-2">
                 <div>
-                  <label className="block text-xs text-white/40 mb-1.5">PTC</label>
-                  <input
-                    className="w-24 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                  <label className="block text-xs text-white/40 mb-1.5">Type</label>
+                  <select
+                    className="w-36 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
                     value={group.code}
-                    placeholder="ADT"
                     onChange={(e) =>
                       updatePassengerGroup(group.id, "code", e.target.value)
                     }
-                  />
+                  >
+                    {PASSENGER_TYPE_OPTIONS.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.code} - {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-white/40 mb-1.5">Qty</label>
+                  <label className="block text-xs text-white/40 mb-1.5">Number</label>
                   <input
                     type="number"
                     min={0}
