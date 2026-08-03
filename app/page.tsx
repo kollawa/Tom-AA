@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 interface Segment {
   id: string;
@@ -17,13 +17,23 @@ interface Segment {
   new_dir: boolean;
 }
 
+interface User {
+  username: string;
+  password: string;
+  role: "admin" | "user";
+}
+
+const DEFAULT_USERS: User[] = [
+  { username: "admin", password: "admin123", role: "admin" },
+  { username: "agent", password: "agent123", role: "user" },
+];
+
 const MONTHS: Record<string, number> = {
   JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
   JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
 };
 
 function parseTime(t: string): { h: number; m: number } | null {
-  // 1020A, 245P, 705A, 855A etc.
   const m = t.match(/^(\d{1,2})(\d{2})([AP])$/i);
   if (!m) return null;
   let h = parseInt(m[1], 10);
@@ -35,7 +45,6 @@ function parseTime(t: string): { h: number; m: number } | null {
 }
 
 function parseDate(d: string, yearHint?: number): Date | null {
-  // 31DEC, 30JAN etc.
   const m = d.match(/^(\d{1,2})([A-Z]{3})$/i);
   if (!m) return null;
   const day = parseInt(m[1], 10);
@@ -43,79 +52,52 @@ function parseDate(d: string, yearHint?: number): Date | null {
   if (mon === undefined) return null;
   const now = new Date();
   let year = yearHint ?? now.getFullYear();
-  // if month is before current and no year, assume next year if past
   const candidate = new Date(year, mon, day);
-  if (!yearHint && candidate < now) {
-    year += 1;
-  }
+  if (!yearHint && candidate < now) year += 1;
   return new Date(year, mon, day);
 }
 
 function parseSabreLine(line: string): Segment | null {
-  // Examples:
-  // 1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
-  // 2 AA2305I 31DEC Q CLTDEN*SS2 456P 635P /DCAA /E
-  // 3 BA 176O 30JAN J JFKLHR*SS2 705P 705A 31JAN S /DCBA /E
-  // 4 BA 396O 31JAN S LHRCAI*SS2 855A 355P /DCBA /E
-  // 1 UA9459P 31DEC Q MUCDEN*SS1 1150A 230P /DCUA /E
-
-  const cleaned = line.trim().replace(/^\d+\s+/, ""); // remove leading number
-
-  // Carrier + flight + class
-  // AA 763I or AA2305I or UA9459P
+  const cleaned = line.trim().replace(/^\d+\s+/, "");
   const flightMatch = cleaned.match(/^([A-Z0-9]{2})\s*(\d{1,4})([A-Z])/i);
   if (!flightMatch) return null;
 
   const cc = flightMatch[1].toUpperCase();
   const num = flightMatch[2];
   const cls = flightMatch[3].toUpperCase();
-
   let rest = cleaned.slice(flightMatch[0].length).trim();
 
-  // Date
   const dateMatch = rest.match(/^(\d{1,2}[A-Z]{3})/i);
   if (!dateMatch) return null;
   const depDateStr = dateMatch[1].toUpperCase();
-  rest = rest.slice(dateMatch[0].length).trim();
+  rest = rest.slice(dateMatch[0].length).trim().replace(/^[A-Z]\s+/, "");
 
-  // Day of week (optional single letter)
-  rest = rest.replace(/^[A-Z]\s+/, "");
-
-  // City pair: MUCCLT*SS2 or MUCDEN*SS1
   const cityMatch = rest.match(/^([A-Z]{3})([A-Z]{3})\*?[A-Z]{0,2}\d*/i);
   if (!cityMatch) return null;
   const orig = cityMatch[1].toUpperCase();
   const dest = cityMatch[2].toUpperCase();
   rest = rest.slice(cityMatch[0].length).trim();
 
-  // Times: 1020A 245P   or  705P 705A 31JAN
   const timeMatch = rest.match(/^(\d{1,4}[AP])\s+(\d{1,4}[AP])/i);
   if (!timeMatch) return null;
   const depTimeStr = timeMatch[1].toUpperCase();
   const arrTimeStr = timeMatch[2].toUpperCase();
   rest = rest.slice(timeMatch[0].length).trim();
 
-  // Optional next day date for arrival
   let arrDateStr = depDateStr;
   const nextDateMatch = rest.match(/^(\d{1,2}[A-Z]{3})/i);
-  if (nextDateMatch) {
-    arrDateStr = nextDateMatch[1].toUpperCase();
-  }
+  if (nextDateMatch) arrDateStr = nextDateMatch[1].toUpperCase();
 
-  // Cabin guess from class
   const cabinMap: Record<string, string> = {
     F: "FIRST", A: "FIRST", P: "FIRST",
-    J: "BUSIN", C: "BUSIN", D: "BUSIN", I: "BUSIN", Z: "BUSIN",
+    J: "BUSIN", C: "BUSIN", D: "BUSIN", I: "FLAGS", Z: "BUSIN",
     W: "PREME", S: "PREME",
     Y: "ECON", B: "ECON", M: "ECON", H: "ECON", Q: "ECON",
     V: "ECON", L: "ECON", K: "ECON", T: "ECON", N: "ECON",
     O: "ECON", G: "ECON", E: "ECON", U: "ECON", X: "ECON",
   };
-  let cabin = cabinMap[cls] || "ECON";
-  // Special for some
-  if (cls === "I" || cls === "D") cabin = "FLAGS"; // from screenshot example
+  const cabin = cabinMap[cls] || "ECON";
 
-  // Build ISO dates
   const depDate = parseDate(depDateStr);
   const arrDate = parseDate(arrDateStr, depDate?.getFullYear());
   const depT = parseTime(depTimeStr);
@@ -133,9 +115,7 @@ function parseSabreLine(line: string): Segment | null {
   if (arrDate && arrT) {
     const a = new Date(arrDate);
     a.setHours(arrT.h, arrT.m, 0, 0);
-    // if arrival time earlier and same day, maybe next day already handled
     arr_local = a.toISOString().slice(0, 16).replace("T", " ");
-
     if (depDate && depT) {
       const depMs = new Date(depDate);
       depMs.setHours(depT.h, depT.m, 0, 0);
@@ -148,47 +128,23 @@ function parseSabreLine(line: string): Segment | null {
 
   return {
     id: Math.random().toString(36).slice(2),
-    cc,
-    num,
-    cls,
-    cabin,
-    orig,
-    dest,
-    dep_local,
-    arr_local,
-    dur,
-    fare_basis: "",
-    new_dir: false,
+    cc, num, cls, cabin, orig, dest, dep_local, arr_local, dur,
+    fare_basis: "", new_dir: false,
   };
 }
 
 function toTimestamp(isoLocal: string): number {
-  // "2026-12-31 10:20" -> ms (treat local time as UTC for AA links)
   if (!isoLocal) return 0;
   const normalized = isoLocal.trim().replace(" ", "T");
-  // Ensure we have seconds
   const withSec = normalized.length === 16 ? normalized + ":00" : normalized;
-  const d = new Date(withSec + "Z");
-  return d.getTime();
+  return new Date(withSec + "Z").getTime();
 }
 
-function generateAALink(
-  segments: Segment[],
-  price: string,
-  _currency: string,
-  pax: number
-): string {
+function generateAALink(segments: Segment[], pax: number): string {
   if (segments.length === 0) return "";
 
-  // Working example structure:
-  // GOOGLE,0,US,multi,4,A1S0C0I0Y0L0,0,MUC,0,DEN,0,0,0,0,0,0,0,1.00,1,
-  // #MUC|DEN|0|0|ts #JFK|CAI|0|0|ts ,
-  // #AA|763|I|MUC|CLT|ts|0 #AA|2305|I|CLT|DEN|ts|0 #BA|176|O|JFK|LHR|ts|1 #BA|396|O|LHR|CAI|ts|1
-
-  // 1) Group segments by direction (new_dir flag starts a new direction)
   const directions: Segment[][] = [];
   let currentDir: Segment[] = [];
-
   segments.forEach((seg, idx) => {
     if (seg.new_dir && idx > 0 && currentDir.length > 0) {
       directions.push(currentDir);
@@ -198,80 +154,156 @@ function generateAALink(
   });
   if (currentDir.length > 0) directions.push(currentDir);
 
-  // 2) City-pairs: only origin of first segment → dest of last segment of each direction
   const cityPairs: string[] = [];
   directions.forEach((dirSegs) => {
     const first = dirSegs[0];
     const last = dirSegs[dirSegs.length - 1];
-    const ts = toTimestamp(first.dep_local);
-    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${ts}`);
+    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local)}`);
   });
 
-  // 3) Flights: every segment with its direction index
   const flights: string[] = [];
   directions.forEach((dirSegs, dirIndex) => {
     dirSegs.forEach((seg) => {
-      const ts = toTimestamp(seg.dep_local);
       flights.push(
-        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${ts}|${dirIndex}`
+        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(seg.dep_local)}|${dirIndex}`
       );
     });
   });
 
-  const cityPairsStr = cityPairs.join("");
-  const flightsStr = flights.join("");
-
-  // 4) Header
   const firstSeg = segments[0];
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const numSeg = segments.length;
 
-  // Cabin code – from working example for I-class they used A1S0C0I0Y0L0
   let cabinCode = "A0S0C0I0Y1L0";
   const classes = segments.map((s) => s.cls);
-  if (classes.some((c) => ["F", "A", "P"].includes(c))) cabinCode = "A1S0C0I0Y0L0";
-  else if (classes.some((c) => ["J", "C", "D", "I", "Z"].includes(c)))
-    cabinCode = "A1S0C0I0Y0L0"; // matches the working example for I class
-  else if (classes.some((c) => ["W", "S"].includes(c))) cabinCode = "A0S1C0I0Y0L0";
+  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
+    cabinCode = "A1S0C0I0Y0L0";
+  else if (classes.some((c) => ["W", "S"].includes(c)))
+    cabinCode = "A0S1C0I0Y0L0";
 
-  const priceStr = price || "0";
-  const header = `GOOGLE,0,US,multi,${numSeg},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,${priceStr},${pax},`;
-
-  const iten = `${header}${encodeURIComponent(cityPairsStr)},${encodeURIComponent(flightsStr)}`;
-
+  const header = `GOOGLE,0,US,multi,${numSeg},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
 
+function loadUsers(): User[] {
+  if (typeof window === "undefined") return DEFAULT_USERS;
+  try {
+    const raw = localStorage.getItem("gds_users");
+    if (raw) {
+      const parsed = JSON.parse(raw) as User[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return DEFAULT_USERS;
+}
+
+function saveUsers(users: User[]) {
+  localStorage.setItem("gds_users", JSON.stringify(users));
+}
+
 export default function Home() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginError, setLoginError] = useState("");
+
+  const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
+  const [showUsers, setShowUsers] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "user">("user");
+
   const [rawLines, setRawLines] = useState("");
   const [segments, setSegments] = useState<Segment[]>([]);
-  const [price, setPrice] = useState("1210.61");
-  const [currency, setCurrency] = useState("USD");
-  const [rate, setRate] = useState("1.16");
   const [pax, setPax] = useState("1");
   const [generatedUrl, setGeneratedUrl] = useState("");
-  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem("gds_session");
+    const allUsers = loadUsers();
+    setUsers(allUsers);
+    if (stored) {
+      try {
+        const u = JSON.parse(stored) as User;
+        const found = allUsers.find(
+          (x) => x.username === u.username && x.password === u.password
+        );
+        if (found) setCurrentUser(found);
+      } catch {}
+    }
+    setAuthChecked(true);
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const found = users.find(
+      (u) => u.username === loginUser.trim() && u.password === loginPass
+    );
+    if (found) {
+      setCurrentUser(found);
+      sessionStorage.setItem("gds_session", JSON.stringify(found));
+      setLoginError("");
+      setLoginUser("");
+      setLoginPass("");
+    } else {
+      setLoginError("Неверный логин или пароль");
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    sessionStorage.removeItem("gds_session");
+    setShowUsers(false);
+  };
+
+  const addUser = () => {
+    if (!newUsername.trim() || !newPassword.trim()) return;
+    if (users.some((u) => u.username === newUsername.trim())) {
+      alert("Такой пользователь уже есть");
+      return;
+    }
+    const updated = [
+      ...users,
+      { username: newUsername.trim(), password: newPassword, role: newRole },
+    ];
+    setUsers(updated);
+    saveUsers(updated);
+    setNewUsername("");
+    setNewPassword("");
+    setNewRole("user");
+  };
+
+  const removeUser = (username: string) => {
+    if (username === currentUser?.username) {
+      alert("Нельзя удалить текущего пользователя");
+      return;
+    }
+    const updated = users.filter((u) => u.username !== username);
+    if (updated.length === 0) {
+      alert("Должен остаться хотя бы один пользователь");
+      return;
+    }
+    setUsers(updated);
+    saveUsers(updated);
+  };
 
   const handleParse = useCallback(() => {
     const lines = rawLines
       .split("\n")
       .map((l) => l.trim())
       .filter((l) => l.length > 5);
-
     const parsed: Segment[] = [];
     for (const line of lines) {
       const seg = parseSabreLine(line);
       if (seg) parsed.push(seg);
     }
-    // Mark first of each "direction" roughly – user can toggle
-    if (parsed.length > 0) {
-      // simple heuristic: if gap in dates > 5 days, mark new dir
-      for (let i = 1; i < parsed.length; i++) {
-        const prev = new Date(parsed[i - 1].dep_local);
-        const curr = new Date(parsed[i].dep_local);
-        const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 3600 * 24);
-        if (diffDays > 5) parsed[i].new_dir = true;
-      }
+    for (let i = 1; i < parsed.length; i++) {
+      const prev = new Date(parsed[i - 1].dep_local);
+      const curr = new Date(parsed[i].dep_local);
+      const diffDays = (curr.getTime() - prev.getTime()) / (1000 * 3600 * 24);
+      if (diffDays > 5) parsed[i].new_dir = true;
     }
     setSegments(parsed);
     setGeneratedUrl("");
@@ -292,51 +324,200 @@ export default function Home() {
       ...prev,
       {
         id: Math.random().toString(36).slice(2),
-        cc: "",
-        num: "",
-        cls: "Y",
-        cabin: "ECON",
-        orig: "",
-        dest: "",
-        dep_local: "",
-        arr_local: "",
-        dur: "",
-        fare_basis: "",
-        new_dir: false,
+        cc: "", num: "", cls: "Y", cabin: "ECON",
+        orig: "", dest: "", dep_local: "", arr_local: "",
+        dur: "", fare_basis: "", new_dir: false,
       },
     ]);
   };
 
   const handleGenerate = () => {
-    const url = generateAALink(segments, price, currency, parseInt(pax) || 1);
+    const url = generateAALink(segments, parseInt(pax) || 1);
     setGeneratedUrl(url);
-    setCopied(false);
   };
 
-  const copyUrl = async () => {
-    if (!generatedUrl) return;
-    await navigator.clipboard.writeText(generatedUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // ——— Loading ———
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
+  // ——— Login screen ———
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/5 rounded-full blur-3xl" />
+
+        <div className="relative w-full max-w-md">
+          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 mb-4 shadow-lg shadow-red-500/20">
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </div>
+              <h1 className="text-2xl font-semibold text-white tracking-tight">GDS Linker</h1>
+              <p className="text-sm text-white/40 mt-1">Войдите, чтобы продолжить</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-white/50 mb-1.5">Логин</label>
+                <input
+                  type="text"
+                  value={loginUser}
+                  onChange={(e) => setLoginUser(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/40 transition"
+                  placeholder="username"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-white/50 mb-1.5">Пароль</label>
+                <input
+                  type="password"
+                  value={loginPass}
+                  onChange={(e) => setLoginPass(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/40 transition"
+                  placeholder="••••••••"
+                />
+              </div>
+              {loginError && (
+                <p className="text-sm text-red-400 text-center">{loginError}</p>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-red-500/20"
+              >
+                Войти
+              </button>
+            </form>
+
+            <p className="text-[11px] text-white/20 text-center mt-6">
+              По умолчанию: admin / admin123
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ——— Main app ———
   return (
-    <div className="min-h-screen bg-[#f7f6f3] py-8 px-4">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-2">
-          GDS → AA Booking Link Generator
-        </h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Paste Sabre availability / itinerary lines (*IA style), parse, edit and generate American Airlines metasearch deep-link.
-        </p>
+    <div className="min-h-screen bg-[#0c0c0f] text-white">
+      {/* Header */}
+      <header className="border-b border-white/5 bg-white/[0.02] backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </div>
+            <span className="font-semibold tracking-tight">GDS Linker</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/40 hidden sm:inline">
+              {currentUser.username}
+              {currentUser.role === "admin" && (
+                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 text-[10px]">admin</span>
+              )}
+            </span>
+            {currentUser.role === "admin" && (
+              <button
+                onClick={() => setShowUsers(!showUsers)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition text-white/60 hover:text-white"
+              >
+                Пользователи
+              </button>
+            )}
+            <button
+              onClick={handleLogout}
+              className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition text-white/60 hover:text-white"
+            >
+              Выйти
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        {/* Users panel (admin only) */}
+        {showUsers && currentUser.role === "admin" && (
+          <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+            <h2 className="text-sm font-medium text-white/80 mb-4">Управление пользователями</h2>
+            <div className="space-y-2 mb-5">
+              {users.map((u) => (
+                <div
+                  key={u.username}
+                  className="flex items-center justify-between bg-white/[0.03] rounded-xl px-4 py-2.5"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">{u.username}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${u.role === "admin" ? "bg-red-500/20 text-red-300" : "bg-white/10 text-white/40"}`}>
+                      {u.role}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeUser(u.username)}
+                    className="text-xs text-white/30 hover:text-red-400 transition"
+                  >
+                    удалить
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2 items-end">
+              <div>
+                <label className="block text-[10px] text-white/40 mb-1">Логин</label>
+                <input
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                  placeholder="username"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-white/40 mb-1">Пароль</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                  placeholder="password"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-white/40 mb-1">Роль</label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as "admin" | "user")}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                >
+                  <option value="user">user</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+              <button
+                onClick={addUser}
+                className="bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-lg transition"
+              >
+                Добавить
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* 1. Paste */}
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 className="text-base font-medium text-gray-800 mb-3">
-            1. Paste GDS availability lines
-          </h2>
+        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+          <h2 className="text-sm font-medium text-white/80 mb-1">1. GDS строки</h2>
+          <p className="text-xs text-white/30 mb-4">Вставьте availability / itinerary линии из Sabre</p>
           <textarea
-            className="w-full h-32 p-3 border border-gray-200 rounded-lg font-mono text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-400"
+            className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
             placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
 2 AA2305I 31DEC Q CLTDEN*SS2 456P 635P /DCAA /E
 3 BA 176O 30JAN J JFKLHR*SS2 705P 705A 31JAN S /DCBA /E
@@ -344,190 +525,106 @@ export default function Home() {
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-4 flex items-center gap-3">
             <button
               onClick={handleParse}
-              className="bg-[#c8102e] hover:bg-[#a50d25] text-white px-5 py-2 rounded-lg text-sm font-medium transition"
+              className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-red-500/10"
             >
               Parse
             </button>
-            <span className="text-sm text-gray-500">
-              {segments.length} segment(s) parsed
+            <span className="text-xs text-white/30">
+              {segments.length > 0 ? `${segments.length} сегмент(ов)` : "нет сегментов"}
             </span>
           </div>
         </section>
 
         {/* 2. Segments */}
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 className="text-base font-medium text-gray-800 mb-1">
-            2. Segments
-          </h2>
-          <p className="text-xs text-gray-500 mb-4">
-            Flight fields come from the pasted lines; fare basis, cabin and the new direction toggle are editable.
+        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+          <h2 className="text-sm font-medium text-white/80 mb-1">2. Сегменты</h2>
+          <p className="text-xs text-white/30 mb-4">
+            Редактируйте cabin, fare basis и флаг new dir
           </p>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="pb-2 pr-2 font-medium">cc</th>
-                  <th className="pb-2 pr-2 font-medium">num</th>
-                  <th className="pb-2 pr-2 font-medium">cls</th>
-                  <th className="pb-2 pr-2 font-medium">cabin</th>
-                  <th className="pb-2 pr-2 font-medium">orig</th>
-                  <th className="pb-2 pr-2 font-medium">dest</th>
-                  <th className="pb-2 pr-2 font-medium">dep_local</th>
-                  <th className="pb-2 pr-2 font-medium">arr_local</th>
-                  <th className="pb-2 pr-2 font-medium">dur</th>
-                  <th className="pb-2 pr-2 font-medium">fare_basis</th>
-                  <th className="pb-2 pr-2 font-medium">new dir</th>
-                  <th className="pb-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {segments.map((seg) => (
-                  <tr key={seg.id} className="border-b border-gray-100">
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-12 border rounded px-1.5 py-1 text-center"
-                        value={seg.cc}
-                        onChange={(e) => updateSegment(seg.id, "cc", e.target.value.toUpperCase())}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-14 border rounded px-1.5 py-1 text-center"
-                        value={seg.num}
-                        onChange={(e) => updateSegment(seg.id, "num", e.target.value)}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-10 border rounded px-1.5 py-1 text-center"
-                        value={seg.cls}
-                        onChange={(e) => updateSegment(seg.id, "cls", e.target.value.toUpperCase())}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-16 border rounded px-1.5 py-1 text-center"
-                        value={seg.cabin}
-                        onChange={(e) => updateSegment(seg.id, "cabin", e.target.value.toUpperCase())}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-14 border rounded px-1.5 py-1 text-center"
-                        value={seg.orig}
-                        onChange={(e) => updateSegment(seg.id, "orig", e.target.value.toUpperCase())}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-14 border rounded px-1.5 py-1 text-center"
-                        value={seg.dest}
-                        onChange={(e) => updateSegment(seg.id, "dest", e.target.value.toUpperCase())}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-36 border rounded px-1.5 py-1"
-                        value={seg.dep_local}
-                        onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-36 border rounded px-1.5 py-1"
-                        value={seg.arr_local}
-                        onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-14 border rounded px-1.5 py-1 text-center"
-                        value={seg.dur}
-                        onChange={(e) => updateSegment(seg.id, "dur", e.target.value)}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <input
-                        className="w-20 border rounded px-1.5 py-1"
-                        value={seg.fare_basis}
-                        onChange={(e) => updateSegment(seg.id, "fare_basis", e.target.value)}
-                      />
-                    </td>
-                    <td className="py-1.5 pr-1 text-center">
-                      <input
-                        type="checkbox"
-                        checked={seg.new_dir}
-                        onChange={(e) => updateSegment(seg.id, "new_dir", e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                    </td>
-                    <td className="py-1.5">
-                      <button
-                        onClick={() => removeSegment(seg.id)}
-                        className="text-gray-400 hover:text-red-500 text-lg leading-none px-1"
-                      >
-                        ×
-                      </button>
-                    </td>
+          {segments.length === 0 ? (
+            <div className="text-center py-10 text-white/20 text-sm">
+              Сначала вставьте и распарсьте строки
+            </div>
+          ) : (
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-white/30 border-b border-white/5">
+                    {["cc", "num", "cls", "cabin", "orig", "dest", "dep", "arr", "dur", "fare", "new dir", ""].map((h) => (
+                      <th key={h} className="pb-3 px-2 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {segments.map((seg) => (
+                    <tr key={seg.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                      <td className="py-2 px-1">
+                        <input className="w-11 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.cc} onChange={(e) => updateSegment(seg.id, "cc", e.target.value.toUpperCase())} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-14 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.num} onChange={(e) => updateSegment(seg.id, "num", e.target.value)} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-9 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.cls} onChange={(e) => updateSegment(seg.id, "cls", e.target.value.toUpperCase())} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-16 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.cabin} onChange={(e) => updateSegment(seg.id, "cabin", e.target.value.toUpperCase())} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.orig} onChange={(e) => updateSegment(seg.id, "orig", e.target.value.toUpperCase())} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dest} onChange={(e) => updateSegment(seg.id, "dest", e.target.value.toUpperCase())} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dep_local} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.arr_local} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dur} onChange={(e) => updateSegment(seg.id, "dur", e.target.value)} />
+                      </td>
+                      <td className="py-2 px-1">
+                        <input className="w-16 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.fare_basis} onChange={(e) => updateSegment(seg.id, "fare_basis", e.target.value)} />
+                      </td>
+                      <td className="py-2 px-1 text-center">
+                        <input type="checkbox" checked={seg.new_dir} onChange={(e) => updateSegment(seg.id, "new_dir", e.target.checked)} className="w-4 h-4 accent-red-500" />
+                      </td>
+                      <td className="py-2 px-1">
+                        <button onClick={() => removeSegment(seg.id)} className="text-white/20 hover:text-red-400 text-lg leading-none px-1 transition">×</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <button
             onClick={addRow}
-            className="mt-3 text-sm border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+            className="mt-4 text-xs border border-white/10 rounded-lg px-3 py-2 hover:bg-white/5 transition text-white/50 hover:text-white"
           >
-            + add row manually
+            + добавить строку
           </button>
         </section>
 
-        {/* 3. Options */}
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 className="text-base font-medium text-gray-800 mb-4">
-            3. Options
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Price (required)
-              </label>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                Source currency
-              </label>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                USD per 1 EUR rate
-              </label>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                value={rate}
-                onChange={(e) => setRate(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="mt-4 max-w-xs">
-            <label className="block text-xs text-gray-500 mb-1">Passengers</label>
+        {/* 3. Options — only passengers */}
+        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+          <h2 className="text-sm font-medium text-white/80 mb-4">3. Параметры</h2>
+          <div className="max-w-[140px]">
+            <label className="block text-xs text-white/40 mb-1.5">Пассажиры</label>
             <input
-              className="w-full border rounded-lg px-3 py-2"
+              type="number"
+              min={1}
+              max={9}
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
               value={pax}
               onChange={(e) => setPax(e.target.value)}
             />
@@ -535,53 +632,37 @@ export default function Home() {
         </section>
 
         {/* 4. Generate */}
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 className="text-base font-medium text-gray-800 mb-4">
-            4. Generate booking
-          </h2>
-          <button
-            onClick={handleGenerate}
-            disabled={segments.length === 0}
-            className="bg-[#c8102e] hover:bg-[#a50d25] disabled:bg-gray-300 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
-          >
-            Generate booking
-          </button>
+        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+          <h2 className="text-sm font-medium text-white/80 mb-4">4. Генерация</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleGenerate}
+              disabled={segments.length === 0}
+              className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 disabled:from-white/10 disabled:to-white/10 disabled:text-white/30 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-red-500/10 disabled:shadow-none"
+            >
+              Generate booking
+            </button>
 
-          {generatedUrl && (
-            <div className="mt-5 space-y-3">
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  className="flex-1 border rounded-lg px-3 py-2 text-xs font-mono bg-gray-50"
-                  value={generatedUrl}
-                />
-                <button
-                  onClick={copyUrl}
-                  className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 whitespace-nowrap"
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-                <a
-                  href={generatedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-gray-700 whitespace-nowrap"
-                >
-                  Open
-                </a>
-              </div>
-              <p className="text-xs text-gray-500">
-                Ссылка сгенерирована. Открой её — AA должна подхватить маршрут.
-                Если что-то не так (даты/классы), поправь сегменты и сгенерируй заново.
-              </p>
-            </div>
-          )}
+            {generatedUrl && (
+              <a
+                href={generatedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-white text-black hover:bg-white/90 px-5 py-2.5 rounded-xl text-sm font-medium transition"
+              >
+                Open link
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            )}
+          </div>
         </section>
+      </main>
 
-        <footer className="text-center text-xs text-gray-400 pt-4">
-          GDS Linker · для внутреннего использования · deploy on Vercel
-        </footer>
-      </div>
+      <footer className="text-center text-[11px] text-white/15 py-8">
+        GDS Linker · internal use
+      </footer>
     </div>
   );
 }
