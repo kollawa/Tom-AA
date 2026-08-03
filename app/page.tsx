@@ -163,65 +163,81 @@ function parseSabreLine(line: string): Segment | null {
 }
 
 function toTimestamp(isoLocal: string): number {
-  // "2026-12-31 10:20" -> ms
+  // "2026-12-31 10:20" -> ms (treat local time as UTC for AA links)
   if (!isoLocal) return 0;
-  const d = new Date(isoLocal.replace(" ", "T") + ":00Z"); // treat as UTC for simplicity, or local
-  // Better: assume the string is local but for AA we need epoch ms
-  // For accuracy we treat the date/time as UTC to avoid TZ issues in browser
+  const normalized = isoLocal.trim().replace(" ", "T");
+  // Ensure we have seconds
+  const withSec = normalized.length === 16 ? normalized + ":00" : normalized;
+  const d = new Date(withSec + "Z");
   return d.getTime();
 }
 
 function generateAALink(
   segments: Segment[],
   price: string,
-  currency: string,
+  _currency: string,
   pax: number
 ): string {
   if (segments.length === 0) return "";
 
-  // Build city pairs part and flights part
-  // From example:
-  // %23LAX%7CDFW%7C0%7C0%7C1788436800000%23DFW%7CATH%7C0%7C0%7C1788436800000...
-  // %23AA%7C1047%7CI%7CLAX%7CDFW%7C1788436800000%7C0%23AA%7C216%7CA%7C...
+  // Working example structure:
+  // GOOGLE,0,US,multi,4,A1S0C0I0Y0L0,0,MUC,0,DEN,0,0,0,0,0,0,0,1.00,1,
+  // #MUC|DEN|0|0|ts #JFK|CAI|0|0|ts ,
+  // #AA|763|I|MUC|CLT|ts|0 #AA|2305|I|CLT|DEN|ts|0 #BA|176|O|JFK|LHR|ts|1 #BA|396|O|LHR|CAI|ts|1
 
-  const cityPairs: string[] = [];
-  const flights: string[] = [];
+  // 1) Group segments by direction (new_dir flag starts a new direction)
+  const directions: Segment[][] = [];
+  let currentDir: Segment[] = [];
 
-  let dirIndex = 0;
   segments.forEach((seg, idx) => {
-    if (seg.new_dir && idx > 0) dirIndex++;
+    if (seg.new_dir && idx > 0 && currentDir.length > 0) {
+      directions.push(currentDir);
+      currentDir = [];
+    }
+    currentDir.push(seg);
+  });
+  if (currentDir.length > 0) directions.push(currentDir);
 
-    const ts = toTimestamp(seg.dep_local);
-    cityPairs.push(`#${seg.orig}|${seg.dest}|0|0|${ts}`);
-    flights.push(
-      `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${ts}|${dirIndex}`
-    );
+  // 2) City-pairs: only origin of first segment → dest of last segment of each direction
+  const cityPairs: string[] = [];
+  directions.forEach((dirSegs) => {
+    const first = dirSegs[0];
+    const last = dirSegs[dirSegs.length - 1];
+    const ts = toTimestamp(first.dep_local);
+    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${ts}`);
+  });
+
+  // 3) Flights: every segment with its direction index
+  const flights: string[] = [];
+  directions.forEach((dirSegs, dirIndex) => {
+    dirSegs.forEach((seg) => {
+      const ts = toTimestamp(seg.dep_local);
+      flights.push(
+        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${ts}|${dirIndex}`
+      );
+    });
   });
 
   const cityPairsStr = cityPairs.join("");
   const flightsStr = flights.join("");
 
-  // Header-ish from example: GOOGLE,0,US,multi,4,A2S0C0I0Y0L0,0,LAX,0,YVR,0,0,0,0,0,0,0,0,1,
-  // We approximate:
-  const first = segments[0];
-  const last = segments[segments.length - 1];
+  // 4) Header
+  const firstSeg = segments[0];
+  const lastOfFirstDir = directions[0][directions[0].length - 1];
   const numSeg = segments.length;
 
-  // A2S0C0I0Y0L0 looks like cabin counts (A=First? S=?, C=Business? etc)
-  // For simplicity use A0S0C0I0Y1L0 or based on cabins
+  // Cabin code – from working example for I-class they used A1S0C0I0Y0L0
   let cabinCode = "A0S0C0I0Y1L0";
-  const hasBiz = segments.some((s) => s.cabin.startsWith("BUS") || s.cabin === "FLAGS");
-  const hasFirst = segments.some((s) => s.cabin.startsWith("FIR"));
-  if (hasFirst) cabinCode = "A1S0C0I0Y0L0";
-  else if (hasBiz) cabinCode = "A0S0C1I0Y0L0";
+  const classes = segments.map((s) => s.cls);
+  if (classes.some((c) => ["F", "A", "P"].includes(c))) cabinCode = "A1S0C0I0Y0L0";
+  else if (classes.some((c) => ["J", "C", "D", "I", "Z"].includes(c)))
+    cabinCode = "A1S0C0I0Y0L0"; // matches the working example for I class
+  else if (classes.some((c) => ["W", "S"].includes(c))) cabinCode = "A0S1C0I0Y0L0";
 
-  const header = `GOOGLE,0,US,multi,${numSeg},${cabinCode},0,${first.orig},0,${last.dest},0,0,0,0,0,0,0,0,${pax},`;
+  const priceStr = price || "0";
+  const header = `GOOGLE,0,US,multi,${numSeg},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,${priceStr},${pax},`;
 
   const iten = `${header}${encodeURIComponent(cityPairsStr)},${encodeURIComponent(flightsStr)}`;
-
-  // Price is not always in the example, but sometimes is. We put it if provided.
-  // Many examples have price in the middle.
-  // For now keep simple structure matching the user's first example.
 
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
