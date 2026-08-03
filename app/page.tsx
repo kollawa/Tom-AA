@@ -42,7 +42,8 @@ interface LocalDateTime extends CalendarDate {
 
 const DEFAULT_USERS: User[] = [
   { username: "admin", password: "admin123", role: "admin" },
-  { username: "agent", password: "agent123", role: "user" },
+  { username: "Chris", password: "My)6jOs/", role: "user" },
+  
 ];
 
 const PASSENGER_TYPE_OPTIONS = [
