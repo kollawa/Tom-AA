@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GDS → AA Booking Link Generator",
-  description: "Parse Sabre GDS lines and generate American Airlines metasearch deep-links",
+  title: "GDS Linker",
+  description: "Sabre GDS → American Airlines booking links",
 };
 
 export default function RootLayout({
@@ -24,10 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#0c0c0f]">{children}</body>
     </html>
   );
 }
