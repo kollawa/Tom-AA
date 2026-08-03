@@ -934,8 +934,8 @@ export default function Home() {
             className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
             placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
 2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
-3 BA 176O 30JAN J JFKLHR*GK1 705P 705A 31JAN S /DCBA /E
-4 BA 396O 31JAN S LHRCAI LL1 855A 355P /DCBA /E`}
+3 BA 176O 30JAN J JFKLHR*GK2 705P 705A 31JAN S /DCBA /E
+4 BA 396O 31JAN S LHRCAI LL2 855A 355P /DCBA /E`}
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
