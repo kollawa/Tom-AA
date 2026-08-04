@@ -140,7 +140,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   JFK: "America/New_York",
   KIN: "America/Jamaica",
   KIX: "Asia/Tokyo",
-  KOA: "Pacific/Kona",
+  KOA: "Pacific/Honolulu",
   KUL: "Asia/Kuala_Lumpur",
   LAS: "America/Los_Angeles",
   LAX: "America/Los_Angeles",
@@ -233,7 +233,6 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YWG: "America/Winnipeg",
   YYC: "America/Edmonton",
   YYZ: "America/Toronto",
-  BZN: "America/Bozeman",
   ZRH: "Europe/Zurich",
 };
 
@@ -515,7 +514,35 @@ function toTimestamp(localValue: string, airport: string): number {
   return localDateTimeToAirportUtcMs(local, airport);
 }
 
-function generateAALink(segments: Segment[], pax: number): string {
+function buildPassengerCode(groups: { code: string; count: string }[]): { code: string; total: number } {
+  // AA ITEN passenger mix: A#S#C#I#Y#L#
+  // A=Adult, S=Senior, C=Child, I=Infant with seat, Y=Youth, L=Lap infant
+  let A = 0, S = 0, C = 0, I = 0, Y = 0, L = 0;
+
+  for (const group of groups) {
+    const n = parseInt(group.count, 10);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    const code = group.code.toUpperCase();
+    if (code === "ADT") A += n;
+    else if (code === "SRC" || code === "SEN") S += n;
+    else if (code === "CNN" || code === "CHD") C += n;
+    else if (code === "INS") I += n; // infant with seat
+    else if (code === "YTH") Y += n;
+    else if (code === "INF") L += n; // lap infant
+    else A += n; // unknown types count as adult
+  }
+
+  if (A + S + C + I + Y + L === 0) A = 1;
+
+  const total = A + S + C + I + Y + L;
+  const code = `A${A}S${S}C${C}I${I}Y${Y}L${L}`;
+  return { code, total };
+}
+
+function generateAALink(
+  segments: Segment[],
+  passengerGroups: { code: string; count: string }[]
+): string {
   if (segments.length === 0) return "";
 
   const directions: Segment[][] = [];
@@ -549,14 +576,9 @@ function generateAALink(segments: Segment[], pax: number): string {
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const aaTripCount = directions.length + 1;
 
-  let cabinCode = "A0S0C0I0Y1L0";
-  const classes = segments.map((s) => s.cls);
-  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
-    cabinCode = "A1S0C0I0Y0L0";
-  else if (classes.some((c) => ["W", "S"].includes(c)))
-    cabinCode = "A0S1C0I0Y0L0";
+  const { code: paxCode, total: pax } = buildPassengerCode(passengerGroups);
 
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
@@ -749,15 +771,13 @@ export default function Home() {
   };
 
   const passengerTotal = passengerGroups.reduce((sum, group) => {
-    // Infants (INF) do not occupy a seat in AA search; count ADT/CNN etc.
-    if (group.code === "INF") return sum;
     const count = parseInt(group.count, 10);
     return sum + (Number.isFinite(count) && count > 0 ? count : 0);
   }, 0);
 
   const buildCurrentUrl = () => {
     if (segments.length === 0) return "";
-    return generateAALink(segments, Math.max(1, passengerTotal || 1));
+    return generateAALink(segments, passengerGroups);
   };
 
   const handleGenerate = () => {
