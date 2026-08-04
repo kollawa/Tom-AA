@@ -43,7 +43,6 @@ interface LocalDateTime extends CalendarDate {
 const DEFAULT_USERS: User[] = [
   { username: "admin", password: "admin123", role: "admin" },
   { username: "Chris", password: "My)6jOs/", role: "user" },
-  
 ];
 
 const PASSENGER_TYPE_OPTIONS = [
@@ -87,6 +86,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   BSB: "America/Sao_Paulo",
   BWI: "America/New_York",
   BZE: "America/Belize",
+  BZN: "America/Denver",
   CAN: "Asia/Shanghai",
   CDG: "Europe/Paris",
   CGK: "Asia/Jakarta",
@@ -227,7 +227,6 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YYC: "America/Edmonton",
   YYZ: "America/Toronto",
   ZRH: "Europe/Zurich",
-  BZN:  "America/Bozeman",
 };
 
 const timeZoneFormatters: Record<string, Intl.DateTimeFormat> = {};
@@ -303,7 +302,6 @@ function formatDisplayDateTime(local: LocalDateTime): string {
 
 function parseDisplayDateTime(value: string): LocalDateTime | null {
   const trimmed = value.trim();
-
   const internal = trimmed.match(
     /^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})/
   );
@@ -316,19 +314,16 @@ function parseDisplayDateTime(value: string): LocalDateTime | null {
       minute: Number(internal[5]),
     };
   }
-
   const display = trimmed.match(
     /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP])M?$/i
   );
   if (!display) return null;
-
   let hour = Number(display[4]);
   const minute = Number(display[5]);
   const ap = display[6].toUpperCase();
   if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
   if (ap === "P" && hour !== 12) hour += 12;
   if (ap === "A" && hour === 12) hour = 0;
-
   return {
     year: Number(display[3]),
     month: Number(display[1]) - 1,
@@ -383,13 +378,11 @@ function localDateTimeToAirportUtcMs(local: LocalDateTime, airport: string): num
   const timeZone = getAirportTimeZone(airport);
   const wallClockUtcMs = localComparableMs(local);
   let utcMs = wallClockUtcMs;
-
   for (let i = 0; i < 3; i++) {
     const nextUtcMs = wallClockUtcMs - getTimeZoneOffsetMs(timeZone, utcMs);
     if (Math.abs(nextUtcMs - utcMs) < 1) return nextUtcMs;
     utcMs = nextUtcMs;
   }
-
   return utcMs;
 }
 
@@ -405,32 +398,18 @@ function calculateDurationMinutes(
 }
 
 function parseSabreLine(line: string): Segment | null {
-  // Supports:
-  // AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
-  // AA2305I 31DEC Q CLTDEN*SS2 ...
-  // BA 176O 30JAN J JFKLHR*HK2 705P 705A 31JAN S /DCBA /E
-  // with or without *, any status: SS, HK, GK, LL, UC, HX, NN, HL, etc.
-
   const cleaned = line.trim().replace(/^\d+\s+/, "");
-
   const flightMatch = cleaned.match(/^([A-Z0-9]{2})\s*(\d{1,4})([A-Z])/i);
   if (!flightMatch) return null;
-
   const cc = flightMatch[1].toUpperCase();
   const num = flightMatch[2];
   const cls = flightMatch[3].toUpperCase();
   let rest = cleaned.slice(flightMatch[0].length).trim();
-
   const dateMatch = rest.match(/^(\d{1,2}[A-Z]{3})/i);
   if (!dateMatch) return null;
   const depDateStr = dateMatch[1].toUpperCase();
   rest = rest.slice(dateMatch[0].length).trim();
-
-  // optional day-of-week letter
   rest = rest.replace(/^[A-Z]\s+/, "");
-
-  // City pair + optional * + status (SS/HK/GK/LL/UC/HX/NN/HL/...) + optional seats digit
-  // Examples: MUCCLT*SS2  MUCCLTSS2  MUCCLT*HK1  JFKLHR*GK  LHRCAI HK2
   const cityMatch = rest.match(
     /^([A-Z]{3})([A-Z]{3})(?:\s*\*?\s*([A-Z]{2})\d*)?/i
   );
@@ -438,18 +417,15 @@ function parseSabreLine(line: string): Segment | null {
   const orig = cityMatch[1].toUpperCase();
   const dest = cityMatch[2].toUpperCase();
   rest = rest.slice(cityMatch[0].length).trim();
-
   const timeMatch = rest.match(/^(\d{1,4}[AP])\s+(\d{1,4}[AP])/i);
   if (!timeMatch) return null;
   const depTimeStr = timeMatch[1].toUpperCase();
   const arrTimeStr = timeMatch[2].toUpperCase();
   rest = rest.slice(timeMatch[0].length).trim();
-
   let arrDateStr = depDateStr;
   const nextDateMatch = rest.match(/^(\d{1,2}[A-Z]{3})/i);
   const hasExplicitArrDate = Boolean(nextDateMatch);
   if (nextDateMatch) arrDateStr = nextDateMatch[1].toUpperCase();
-
   const cabinMap: Record<string, string> = {
     F: "FIRST", A: "FIRST", P: "FIRST",
     J: "BUSIN", C: "BUSIN", D: "BUSIN", I: "FLAGS", Z: "BUSIN",
@@ -459,7 +435,6 @@ function parseSabreLine(line: string): Segment | null {
     O: "ECON", G: "ECON", E: "ECON", U: "ECON", X: "ECON",
   };
   const cabin = cabinMap[cls] || "ECON";
-
   const depDate = parseDate(depDateStr);
   let arrDate = parseDate(arrDateStr, depDate?.year);
   if (depDate && arrDate && hasExplicitArrDate && dateKey(arrDate) < dateKey(depDate)) {
@@ -467,11 +442,9 @@ function parseSabreLine(line: string): Segment | null {
   }
   const depT = parseTime(depTimeStr);
   const arrT = parseTime(arrTimeStr);
-
   let dep_local = "";
   let arr_local = "";
   let dur = "";
-
   if (depDate && depT) {
     dep_local = formatDisplayDateTime(combineDateTime(depDate, depT));
   }
@@ -481,20 +454,17 @@ function parseSabreLine(line: string): Segment | null {
       let arrLocal = combineDateTime(arrDate, arrT);
       let mins = calculateDurationMinutes(depLocal, arrLocal, orig, dest);
       let guard = 0;
-
       while (mins <= 0 && guard < 3) {
         arrLocal = addDays(arrLocal, 1);
         mins = calculateDurationMinutes(depLocal, arrLocal, orig, dest);
         guard += 1;
       }
-
       arr_local = formatDisplayDateTime(arrLocal);
       if (mins > 0) dur = String(mins);
     } else {
       arr_local = formatDisplayDateTime(combineDateTime(arrDate, arrT));
     }
   }
-
   return {
     id: Math.random().toString(36).slice(2),
     cc, num, cls, cabin, orig, dest, dep_local, arr_local, dur,
@@ -508,7 +478,35 @@ function toTimestamp(localValue: string, airport: string): number {
   return localDateTimeToAirportUtcMs(local, airport);
 }
 
-function generateAALink(segments: Segment[], pax: number): string {
+function buildPaxCode(groups: { code: string; count: string }[]): { code: string; total: number } {
+  // A#S0C0I0Y0L0 — A=ADT, C=CNN, L=INF
+  let A = 0, S = 0, C = 0, I = 0, Y = 0, L = 0;
+  for (const g of groups) {
+    const n = parseInt(g.count, 10);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    const code = g.code.toUpperCase();
+    if (code === "ADT") A += n;
+    else if (code === "SRC" || code === "SEN") S += n;
+    else if (code === "CNN" || code === "CHD") C += n;
+    else if (code === "INS") I += n;
+    else if (code === "YTH") Y += n;
+    else if (code === "INF") L += n;
+    else A += n;
+  }
+  if (A + S + C + I + Y + L === 0) A = 1;
+  let total = A + S + C + I + Y + L;
+  if (total > 9) {
+    const excess = total - 9;
+    A = Math.max(0, A - excess);
+    total = A + S + C + I + Y + L;
+  }
+  return { code: `A${A}S${S}C${C}I${I}Y${Y}L${L}`, total };
+}
+
+function generateAALink(
+  segments: Segment[],
+  passengerGroups: { code: string; count: string }[]
+): string {
   if (segments.length === 0) return "";
 
   const directions: Segment[][] = [];
@@ -542,14 +540,10 @@ function generateAALink(segments: Segment[], pax: number): string {
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const aaTripCount = directions.length + 1;
 
-  let cabinCode = "A0S0C0I0Y1L0";
-  const classes = segments.map((s) => s.cls);
-  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
-    cabinCode = "A1S0C0I0Y0L0";
-  else if (classes.some((c) => ["W", "S"].includes(c)))
-    cabinCode = "A0S1C0I0Y0L0";
+  // Passenger mix from UI (ADT/CNN/INF) → A#S#C#I#Y#L#
+  const { code: paxCode, total: pax } = buildPaxCode(passengerGroups);
 
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
@@ -576,13 +570,11 @@ export default function Home() {
   const [loginUser, setLoginUser] = useState("");
   const [loginPass, setLoginPass] = useState("");
   const [loginError, setLoginError] = useState("");
-
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [showUsers, setShowUsers] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "user">("user");
-
   const [rawLines, setRawLines] = useState("");
   const [segments, setSegments] = useState<Segment[]>([]);
   const [passengerGroups, setPassengerGroups] = useState<PassengerGroup[]>(
@@ -678,7 +670,6 @@ export default function Home() {
         prevDep && currDep
           ? (localComparableMs(currDep) - localComparableMs(prevDep)) / (1000 * 3600 * 24)
           : 0;
-
       if (prev.dest !== curr.orig || diffDays > 5) parsed[i].new_dir = true;
     }
     setSegments(parsed);
@@ -728,7 +719,6 @@ export default function Home() {
     const nextType =
       PASSENGER_TYPE_OPTIONS.find((option) => !usedCodes.has(option.code)) ||
       PASSENGER_TYPE_OPTIONS[0];
-
     setPassengerGroups((prev) => [
       ...prev,
       { id: Math.random().toString(36).slice(2), code: nextType.code, count: "1" },
@@ -747,17 +737,18 @@ export default function Home() {
   }, 0);
 
   const handleGenerate = () => {
-    const url = generateAALink(segments, passengerTotal || 1);
+    const url = generateAALink(segments, passengerGroups);
     setGeneratedUrl(url);
   };
 
-  // Open without exposing URL in DOM / right-click
   const handleOpenLink = () => {
-    if (!generatedUrl) return;
+    const url = generateAALink(segments, passengerGroups) || generatedUrl;
+    if (!url) return;
+    setGeneratedUrl(url);
     const w = window.open("about:blank", "_blank");
     if (w) {
       w.opener = null;
-      w.location.replace(generatedUrl);
+      w.location.replace(url);
     }
   };
 
@@ -774,7 +765,6 @@ export default function Home() {
       <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center p-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/5 rounded-full blur-3xl" />
-
         <div className="relative w-full max-w-md">
           <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
             <div className="text-center mb-8">
@@ -786,7 +776,6 @@ export default function Home() {
               <h1 className="text-2xl font-semibold text-white tracking-tight">GDS Linker</h1>
               <p className="text-sm text-white/40 mt-1">Sign in to continue</p>
             </div>
-
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-white/50 mb-1.5">Username</label>
@@ -958,7 +947,6 @@ export default function Home() {
           <p className="text-xs text-white/30 mb-4">
             Edit cabin and the new direction flag
           </p>
-
           {segments.length === 0 ? (
             <div className="text-center py-10 text-white/20 text-sm">
               Paste and parse lines first
@@ -1011,7 +999,6 @@ export default function Home() {
               </table>
             </div>
           )}
-
           <button
             onClick={addRow}
             className="mt-4 text-xs border border-white/10 rounded-lg px-3 py-2 hover:bg-white/5 transition text-white/50 hover:text-white"
@@ -1088,7 +1075,6 @@ export default function Home() {
             >
               Generate booking
             </button>
-
             {generatedUrl && (
               <button
                 type="button"
