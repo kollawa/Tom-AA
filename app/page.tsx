@@ -514,7 +514,35 @@ function toTimestamp(localValue: string, airport: string): number {
   return localDateTimeToAirportUtcMs(local, airport);
 }
 
-function generateAALink(segments: Segment[], pax: number): string {
+function buildPaxCode(groups: { code: string; count: string }[]): { code: string; total: number } {
+  // A#S0C0I0Y0L0 — # = number of adults (ADT). CNN→C, INF→L
+  let A = 0, S = 0, C = 0, I = 0, Y = 0, L = 0;
+  for (const g of groups) {
+    const n = parseInt(g.count, 10);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    const code = g.code.toUpperCase();
+    if (code === "ADT") A += n;
+    else if (code === "SRC" || code === "SEN") S += n;
+    else if (code === "CNN" || code === "CHD") C += n;
+    else if (code === "INS") I += n;
+    else if (code === "YTH") Y += n;
+    else if (code === "INF") L += n;
+    else A += n;
+  }
+  if (A + S + C + I + Y + L === 0) A = 1;
+  let total = A + S + C + I + Y + L;
+  if (total > 9) {
+    const excess = total - 9;
+    A = Math.max(0, A - excess);
+    total = A + S + C + I + Y + L;
+  }
+  return { code: `A${A}S${S}C${C}I${I}Y${Y}L${L}`, total };
+}
+
+function generateAALink(
+  segments: Segment[],
+  passengerGroups: { code: string; count: string }[]
+): string {
   if (segments.length === 0) return "";
 
   const directions: Segment[][] = [];
@@ -545,17 +573,15 @@ function generateAALink(segments: Segment[], pax: number): string {
   });
 
   const firstSeg = segments[0];
+  // Working AA links: multi,<segments+1>,A#S0C0I0Y0L0,...
+  // City-pair header uses first origin + last dest of FIRST direction only
   const lastOfFirstDir = directions[0][directions[0].length - 1];
-  const aaTripCount = directions.length + 1;
+  const aaTripCount = segments.length + 1;
 
-  let cabinCode = "A0S0C0I0Y1L0";
-  const classes = segments.map((s) => s.cls);
-  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
-    cabinCode = "A1S0C0I0Y0L0";
-  else if (classes.some((c) => ["W", "S"].includes(c)))
-    cabinCode = "A0S1C0I0Y0L0";
+  // Only A# changes with passenger count (A1, A2, A3...). Trailing ",1," stays 1.
+  const { code: paxCode } = buildPaxCode(passengerGroups);
 
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,1,`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
@@ -753,17 +779,19 @@ export default function Home() {
   }, 0);
 
   const handleGenerate = () => {
-    const url = generateAALink(segments, passengerTotal || 1);
+    const url = generateAALink(segments, passengerGroups);
     setGeneratedUrl(url);
   };
 
-  // Open without exposing URL in DOM / right-click
+  // Always rebuild link with current passenger counts
   const handleOpenLink = () => {
-    if (!generatedUrl) return;
+    const url = generateAALink(segments, passengerGroups) || generatedUrl;
+    if (!url) return;
+    setGeneratedUrl(url);
     const w = window.open("about:blank", "_blank");
     if (w) {
       w.opener = null;
-      w.location.replace(generatedUrl);
+      w.location.replace(url);
     }
   };
 
