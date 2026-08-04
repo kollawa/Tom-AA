@@ -188,14 +188,11 @@ function generateAALink(segments: Segment[], pax: number): string {
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const numSeg = segments.length;
 
-  let cabinCode = "A0S0C0I0Y1L0";
-  const classes = segments.map((s) => s.cls);
-  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
-    cabinCode = "A1S0C0I0Y0L0";
-  else if (classes.some((c) => ["W", "S"].includes(c)))
-    cabinCode = "A0S1C0I0Y0L0";
+  // Same as Apps Script: adults 1-9 -> A#S0C0I0Y0L0
+  const adults = Math.max(1, Math.min(9, parseInt(String(pax), 10) || 1));
+  const paxCode = `A${adults}S0C0I0Y0L0`;
 
-  const header = `GOOGLE,0,US,multi,${numSeg},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const header = `GOOGLE,0,US,multi,${numSeg},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${adults},`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
@@ -346,18 +343,28 @@ export default function Home() {
   };
 
   const handleGenerate = () => {
-    const url = generateAALink(segments, parseInt(pax) || 1);
+    const adults = Math.max(1, Math.min(9, parseInt(pax, 10) || 1));
+    const url = generateAALink(segments, adults);
     setGeneratedUrl(url);
   };
 
-  // Open without exposing URL in DOM / right-click
   const handleOpenLink = () => {
-    if (!generatedUrl) return;
-    const w = window.open("about:blank", "_blank");
+    const adults = Math.max(1, Math.min(9, parseInt(pax, 10) || 1));
+    const url = generateAALink(segments, adults) || generatedUrl;
+    if (!url) return;
+    setGeneratedUrl(url);
+    const w = window.open(url, "_blank", "noopener,noreferrer");
     if (w) {
-      w.opener = null;
-      w.location.replace(generatedUrl);
+      try { w.opener = null; } catch {}
+      return;
     }
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   if (!authChecked) {
@@ -631,15 +638,18 @@ export default function Home() {
         <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
           <h2 className="text-sm font-medium text-white/80 mb-4">3. Options</h2>
           <div className="max-w-[140px]">
-            <label className="block text-xs text-white/40 mb-1.5">Passengers</label>
-            <input
-              type="number"
-              min={1}
-              max={9}
+            <label className="block text-xs text-white/40 mb-1.5">Passengers (Adult 1-9)</label>
+            <select
               className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
               value={pax}
               onChange={(e) => setPax(e.target.value)}
-            />
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                <option key={n} value={String(n)}>
+                  {n}
+                </option>
+              ))}
+            </select>
           </div>
         </section>
 
