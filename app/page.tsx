@@ -23,6 +23,12 @@ interface User {
   role: "admin" | "user";
 }
 
+interface AuthSession {
+  username: string;
+  password: string;
+  expiresAt: number;
+}
+
 interface PassengerGroup {
   id: string;
   code: string;
@@ -42,9 +48,10 @@ interface LocalDateTime extends CalendarDate {
 
 const DEFAULT_USERS: User[] = [
   { username: "admin", password: "admin123", role: "admin" },
-  { username: "Chris", password: "My)6jOs/", role: "user" },
-  
+  { username: "agent", password: "agent123", role: "user" },
 ];
+
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const PASSENGER_TYPE_OPTIONS = [
   { code: "ADT", label: "Adult" },
@@ -226,9 +233,8 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YWG: "America/Winnipeg",
   YYC: "America/Edmonton",
   YYZ: "America/Toronto",
+  BZN: "America/Bozeman",
   ZRH: "Europe/Zurich",
-  CAI: "Africa/Cairo",
-  BZN:  "America/Bozeman",
 };
 
 const timeZoneFormatters: Record<string, Intl.DateTimeFormat> = {};
@@ -509,19 +515,8 @@ function toTimestamp(localValue: string, airport: string): number {
   return localDateTimeToAirportUtcMs(local, airport);
 }
 
-function generateAALink(segments: Segment[], groups: PassengerGroup[]): string {
+function generateAALink(segments: Segment[], pax: number): string {
   if (segments.length === 0) return "";
-
-  // Считаем количество по каждому типу пассажиров
-  const paxByCode: Record<string, number> = {};
-  let totalPax = 0;
-  for (const group of groups) {
-    const count = parseInt(group.count, 10);
-    if (Number.isFinite(count) && count > 0) {
-      paxByCode[group.code] = (paxByCode[group.code] || 0) + count;
-      totalPax += count;
-    }
-  }
 
   const directions: Segment[][] = [];
   let currentDir: Segment[] = [];
@@ -538,19 +533,14 @@ function generateAALink(segments: Segment[], groups: PassengerGroup[]): string {
   directions.forEach((dirSegs) => {
     const first = dirSegs[0];
     const last = dirSegs[dirSegs.length - 1];
-    cityPairs.push(
-      `#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local, first.orig)}`
-    );
+    cityPairs.push(`#${first.orig}|${last.dest}|0|0|${toTimestamp(first.dep_local, first.orig)}`);
   });
 
   const flights: string[] = [];
   directions.forEach((dirSegs, dirIndex) => {
     dirSegs.forEach((seg) => {
       flights.push(
-        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(
-          seg.dep_local,
-          seg.orig
-        )}|${dirIndex}`
+        `#${seg.cc}|${seg.num}|${seg.cls}|${seg.orig}|${seg.dest}|${toTimestamp(seg.dep_local, seg.orig)}|${dirIndex}`
       );
     });
   });
@@ -559,34 +549,15 @@ function generateAALink(segments: Segment[], groups: PassengerGroup[]): string {
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const aaTripCount = directions.length + 1;
 
-  // Определяем кабину из классов сегментов
+  let cabinCode = "A0S0C0I0Y1L0";
   const classes = segments.map((s) => s.cls);
-  const hasFirst = classes.some((c) => ["F", "A", "P"].includes(c));
-  const hasBusiness = classes.some((c) => ["J", "C", "D", "I", "Z"].includes(c));
-  const hasPremium = classes.some((c) => ["W", "S"].includes(c));
-
-  let cabinCode = "A0S0C0I0Y0L0";
-  if (hasFirst) {
+  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
     cabinCode = "A1S0C0I0Y0L0";
-  } else if (hasBusiness) {
-    cabinCode = "A0S0C1I0Y0L0";
-  } else if (hasPremium) {
+  else if (classes.some((c) => ["W", "S"].includes(c)))
     cabinCode = "A0S1C0I0Y0L0";
-  } else {
-    cabinCode = "A0S0C0I0Y1L0";
-  }
 
-  // Формируем пассажирский код: A{ADT}S{senior}C{child}I{infant_seat}Y{youth}L{infant_lap}
-  const adtCount = paxByCode["ADT"] || 0;
-  const cnnCount = paxByCode["CNN"] || 0;
-  const infCount = paxByCode["INF"] || 0;
-
-  const passengerCode = `A${adtCount}S0C${cnnCount}I${infCount}Y0L0`;
-
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${totalPax || 1},`;
-  const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(
-    flights.join("")
-  )}`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
 
@@ -778,22 +749,31 @@ export default function Home() {
   };
 
   const passengerTotal = passengerGroups.reduce((sum, group) => {
+    // Infants (INF) do not occupy a seat in AA search; count ADT/CNN etc.
+    if (group.code === "INF") return sum;
     const count = parseInt(group.count, 10);
     return sum + (Number.isFinite(count) && count > 0 ? count : 0);
   }, 0);
 
-const handleGenerate = () => {
-  const url = generateAALink(segments, passengerGroups);
-  setGeneratedUrl(url);
-};
+  const buildCurrentUrl = () => {
+    if (segments.length === 0) return "";
+    return generateAALink(segments, Math.max(1, passengerTotal || 1));
+  };
 
-  // Open without exposing URL in DOM / right-click
+  const handleGenerate = () => {
+    const url = buildCurrentUrl();
+    setGeneratedUrl(url);
+  };
+
+  // Always rebuild from current segments + passenger count so pax changes apply
   const handleOpenLink = () => {
-    if (!generatedUrl) return;
+    const url = buildCurrentUrl() || generatedUrl;
+    if (!url) return;
+    setGeneratedUrl(url);
     const w = window.open("about:blank", "_blank");
     if (w) {
       w.opener = null;
-      w.location.replace(generatedUrl);
+      w.location.replace(url);
     }
   };
 
@@ -971,8 +951,8 @@ const handleGenerate = () => {
             className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
             placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
 2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
-3 BA 176O 30JAN J JFKLHR*GK2 705P 705A 31JAN S /DCBA /E
-4 BA 396O 31JAN S LHRCAI LL2 855A 355P /DCBA /E`}
+3 BA 176O 30JAN J JFKLHR*GK1 705P 705A 31JAN S /DCBA /E
+4 BA 396O 31JAN S LHRCAI LL1 855A 355P /DCBA /E`}
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
