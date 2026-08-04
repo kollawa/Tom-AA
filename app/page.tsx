@@ -737,19 +737,36 @@ export default function Home() {
     field: keyof PassengerGroup,
     value: string
   ) => {
-    setPassengerGroups((prev) =>
-      prev.map((group) =>
-        group.id === id
-          ? {
-              ...group,
-              [field]:
-                field === "code"
-                  ? value.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase()
-                  : value,
-            }
-          : group
-      )
-    );
+    setPassengerGroups((prev) => {
+      const next = prev.map((group) => {
+        if (group.id !== id) return group;
+        if (field === "code") {
+          return {
+            ...group,
+            code: value.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase(),
+          };
+        }
+        // Count: allow 0..9 only
+        let n = parseInt(value, 10);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        if (n > 9) n = 9;
+        return { ...group, count: String(n) };
+      });
+
+      // Cap total passengers at 9
+      const total = next.reduce((sum, g) => sum + (parseInt(g.count, 10) || 0), 0);
+      if (total <= 9) return next;
+
+      // If over 9, reduce the edited group back so total = 9
+      return next.map((group) => {
+        if (group.id !== id || field === "code") return group;
+        const others = next
+          .filter((g) => g.id !== id)
+          .reduce((sum, g) => sum + (parseInt(g.count, 10) || 0), 0);
+        const allowed = Math.max(0, 9 - others);
+        return { ...group, count: String(allowed) };
+      });
+    });
   };
 
   const addPassengerGroup = () => {
@@ -1079,16 +1096,19 @@ export default function Home() {
                 </div>
                 <div>
                   <label className="block text-xs text-white/40 mb-1.5">Number</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={9}
+                  <select
                     className="w-20 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
                     value={group.count}
                     onChange={(e) =>
                       updatePassengerGroup(group.id, "count", e.target.value)
                     }
-                  />
+                  >
+                    {Array.from({ length: 10 }, (_, i) => (
+                      <option key={i} value={String(i)}>
+                        {i}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {passengerGroups.length > 1 && (
                   <button
@@ -1109,7 +1129,7 @@ export default function Home() {
               >
                 + add type
               </button>
-              <span className="text-xs text-white/30">total {passengerTotal || 1}</span>
+              <span className="text-xs text-white/30">total {passengerTotal || 1} / 9</span>
             </div>
           </div>
         </section>
