@@ -574,7 +574,7 @@ function generateAALink(
 
   const firstSeg = segments[0];
   const lastOfFirstDir = directions[0][directions[0].length - 1];
-  const aaTripCount = directions.length + 1;
+  const aaTripCount = segments.length;
 
   const { code: paxCode, total: pax } = buildPassengerCode(passengerGroups);
 
@@ -807,11 +807,22 @@ export default function Home() {
     const url = buildCurrentUrl() || generatedUrl;
     if (!url) return;
     setGeneratedUrl(url);
-    const w = window.open("about:blank", "_blank");
+
+    // Prefer direct open (more reliable than about:blank + replace)
+    const w = window.open(url, "_blank", "noopener,noreferrer");
     if (w) {
-      w.opener = null;
-      w.location.replace(url);
+      try { w.opener = null; } catch {}
+      return;
     }
+
+    // Popup blocked fallback: navigate via hidden anchor
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   if (!authChecked) {
