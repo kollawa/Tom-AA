@@ -581,6 +581,24 @@ export default function Home() {
     DEFAULT_PASSENGER_GROUPS
   );
   const [generatedUrl, setGeneratedUrl] = useState("");
+  // Admin-only: show/hide raw booking URL
+  const [showLink, setShowLink] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("gds_show_link") === "1") setShowLink(true);
+    } catch {}
+  }, []);
+
+  const toggleShowLink = () => {
+    setShowLink((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("gds_show_link", next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     const stored = sessionStorage.getItem("gds_session");
@@ -834,12 +852,25 @@ export default function Home() {
               )}
             </span>
             {currentUser.role === "admin" && (
-              <button
-                onClick={() => setShowUsers(!showUsers)}
-                className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition text-white/60 hover:text-white"
-              >
-                Users
-              </button>
+              <>
+                <button
+                  onClick={toggleShowLink}
+                  className={`text-xs px-3 py-1.5 rounded-lg border transition ${
+                    showLink
+                      ? "border-red-500/40 bg-red-500/15 text-red-300"
+                      : "border-white/10 hover:bg-white/5 text-white/60 hover:text-white"
+                  }`}
+                  title="Show or hide the generated URL"
+                >
+                  {showLink ? "Hide link" : "Show link"}
+                </button>
+                <button
+                  onClick={() => setShowUsers(!showUsers)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition text-white/60 hover:text-white"
+                >
+                  Users
+                </button>
+              </>
             )}
             <button
               onClick={handleLogout}
@@ -1093,6 +1124,28 @@ export default function Home() {
               </button>
             )}
           </div>
+
+          {currentUser.role === "admin" && showLink && generatedUrl && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-white/40">Generated URL (admin)</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(generatedUrl).catch(() => {});
+                  }}
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-white/10 hover:bg-white/5 text-white/50 hover:text-white transition"
+                >
+                  Copy
+                </button>
+              </div>
+              <textarea
+                readOnly
+                value={generatedUrl}
+                className="w-full h-24 p-3 bg-black/40 border border-white/10 rounded-xl font-mono text-[11px] text-white/70 focus:outline-none resize-y"
+              />
+            </div>
+          )}
         </section>
       </main>
 
