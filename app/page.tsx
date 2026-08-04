@@ -140,7 +140,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   JFK: "America/New_York",
   KIN: "America/Jamaica",
   KIX: "Asia/Tokyo",
-  KOA: "Pacific/Honolulu",
+  KOA: "Pacific/Kona",
   KUL: "Asia/Kuala_Lumpur",
   LAS: "America/Los_Angeles",
   LAX: "America/Los_Angeles",
