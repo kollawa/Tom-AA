@@ -23,12 +23,6 @@ interface User {
   role: "admin" | "user";
 }
 
-interface AuthSession {
-  username: string;
-  password: string;
-  expiresAt: number;
-}
-
 interface PassengerGroup {
   id: string;
   code: string;
@@ -48,10 +42,9 @@ interface LocalDateTime extends CalendarDate {
 
 const DEFAULT_USERS: User[] = [
   { username: "admin", password: "admin123", role: "admin" },
-  { username: "agent", password: "agent123", role: "user" },
+  { username: "Chris", password: "My)6jOs/", role: "user" },
+  
 ];
-
-const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const PASSENGER_TYPE_OPTIONS = [
   { code: "ADT", label: "Adult" },
@@ -140,7 +133,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   JFK: "America/New_York",
   KIN: "America/Jamaica",
   KIX: "Asia/Tokyo",
-  KOA: "Pacific/Kona",
+  KOA: "Pacific/Honolulu",
   KUL: "Asia/Kuala_Lumpur",
   LAS: "America/Los_Angeles",
   LAX: "America/Los_Angeles",
@@ -234,6 +227,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YYC: "America/Edmonton",
   YYZ: "America/Toronto",
   ZRH: "Europe/Zurich",
+  BZN:  "America/Bozeman",
 };
 
 const timeZoneFormatters: Record<string, Intl.DateTimeFormat> = {};
@@ -514,35 +508,7 @@ function toTimestamp(localValue: string, airport: string): number {
   return localDateTimeToAirportUtcMs(local, airport);
 }
 
-function buildPaxCode(groups: { code: string; count: string }[]): { code: string; total: number } {
-  // A#S0C0I0Y0L0 — # = number of adults (ADT). CNN→C, INF→L
-  let A = 0, S = 0, C = 0, I = 0, Y = 0, L = 0;
-  for (const g of groups) {
-    const n = parseInt(g.count, 10);
-    if (!Number.isFinite(n) || n <= 0) continue;
-    const code = g.code.toUpperCase();
-    if (code === "ADT") A += n;
-    else if (code === "SRC" || code === "SEN") S += n;
-    else if (code === "CNN" || code === "CHD") C += n;
-    else if (code === "INS") I += n;
-    else if (code === "YTH") Y += n;
-    else if (code === "INF") L += n;
-    else A += n;
-  }
-  if (A + S + C + I + Y + L === 0) A = 1;
-  let total = A + S + C + I + Y + L;
-  if (total > 9) {
-    const excess = total - 9;
-    A = Math.max(0, A - excess);
-    total = A + S + C + I + Y + L;
-  }
-  return { code: `A${A}S${S}C${C}I${I}Y${Y}L${L}`, total };
-}
-
-function generateAALink(
-  segments: Segment[],
-  passengerGroups: { code: string; count: string }[]
-): string {
+function generateAALink(segments: Segment[], pax: number): string {
   if (segments.length === 0) return "";
 
   const directions: Segment[][] = [];
@@ -573,15 +539,17 @@ function generateAALink(
   });
 
   const firstSeg = segments[0];
-  // Working AA links: multi,<segments+1>,A#S0C0I0Y0L0,...
-  // City-pair header uses first origin + last dest of FIRST direction only
   const lastOfFirstDir = directions[0][directions[0].length - 1];
-  const aaTripCount = segments.length + 1;
+  const aaTripCount = directions.length + 1;
 
-  // Only A# changes with passenger count (A1, A2, A3...). Trailing ",1," stays 1.
-  const { code: paxCode } = buildPaxCode(passengerGroups);
+  let cabinCode = "A0S0C0I0Y1L0";
+  const classes = segments.map((s) => s.cls);
+  if (classes.some((c) => ["F", "A", "P", "J", "C", "D", "I", "Z"].includes(c)))
+    cabinCode = "A1S0C0I0Y0L0";
+  else if (classes.some((c) => ["W", "S"].includes(c)))
+    cabinCode = "A0S1C0I0Y0L0";
 
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,1,`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${cabinCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
@@ -779,19 +747,17 @@ export default function Home() {
   }, 0);
 
   const handleGenerate = () => {
-    const url = generateAALink(segments, passengerGroups);
+    const url = generateAALink(segments, passengerTotal || 1);
     setGeneratedUrl(url);
   };
 
-  // Always rebuild link with current passenger counts
+  // Open without exposing URL in DOM / right-click
   const handleOpenLink = () => {
-    const url = generateAALink(segments, passengerGroups) || generatedUrl;
-    if (!url) return;
-    setGeneratedUrl(url);
+    if (!generatedUrl) return;
     const w = window.open("about:blank", "_blank");
     if (w) {
       w.opener = null;
-      w.location.replace(url);
+      w.location.replace(generatedUrl);
     }
   };
 
@@ -969,8 +935,8 @@ export default function Home() {
             className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
             placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
 2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
-3 BA 176O 30JAN J JFKLHR*GK1 705P 705A 31JAN S /DCBA /E
-4 BA 396O 31JAN S LHRCAI LL1 855A 355P /DCBA /E`}
+3 BA 176O 30JAN J JFKLHR*GK2 705P 705A 31JAN S /DCBA /E
+4 BA 396O 31JAN S LHRCAI LL2 855A 355P /DCBA /E`}
             value={rawLines}
             onChange={(e) => setRawLines(e.target.value)}
           />
