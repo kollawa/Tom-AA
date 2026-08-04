@@ -540,10 +540,11 @@ function generateAALink(
   const lastOfFirstDir = directions[0][directions[0].length - 1];
   const aaTripCount = directions.length + 1;
 
-  // Passenger mix from UI (ADT/CNN/INF) → A#S#C#I#Y#L#
-  const { code: paxCode, total: pax } = buildPaxCode(passengerGroups);
+  // Passenger mix from UI (ADT/CNN/INF) → A#S#C#I#Y#L# only
+  // Trailing ,0,0,0,0,0,0,0,0,1, is static (never changes with pax count)
+  const { code: paxCode } = buildPaxCode(passengerGroups);
 
-  const header = `GOOGLE,0,US,multi,${aaTripCount},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,1.00,${pax},`;
+  const header = `GOOGLE,0,US,multi,${aaTripCount},${paxCode},0,${firstSeg.orig},0,${lastOfFirstDir.dest},0,0,0,0,0,0,0,0,1,`;
   const iten = `${header}${encodeURIComponent(cityPairs.join(""))},${encodeURIComponent(flights.join(""))}`;
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
