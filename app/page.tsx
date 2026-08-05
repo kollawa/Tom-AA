@@ -538,7 +538,8 @@ function generateAALink(
 
   const firstSeg = segments[0];
   const lastOfFirstDir = directions[0][directions[0].length - 1];
-  const aaTripCount = directions.length + 1;
+  // Working AA links always use multi,4 (not direction count)
+  const aaTripCount = 4;
 
   // Passenger mix from UI (ADT/CNN/INF) → A#S#C#I#Y#L# only
   // Trailing ,0,0,0,0,0,0,0,0,1, is static (never changes with pax count)
