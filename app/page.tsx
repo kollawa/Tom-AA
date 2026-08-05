@@ -131,7 +131,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   IND: "America/Indiana/Indianapolis",
   IST: "Europe/Istanbul",
   JFK: "America/New_York",
-  KIN: "America/Jamaica",
+  KIN: "Jamaica/Kingston Manley",
   KIX: "Asia/Tokyo",
   KOA: "Pacific/Honolulu",
   KUL: "Asia/Kuala_Lumpur",
