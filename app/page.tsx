@@ -227,330 +227,6 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   YYC: "America/Edmonton",
   YYZ: "America/Toronto",
   ZRH: "Europe/Zurich",
-  ABQ: "America/Denver",
-  ALB: "America/New_York",
-  AMA: "America/Chicago",
-  ASE: "America/Denver",
-  AVL: "America/New_York",
-  BDL: "America/New_York",
-  BHM: "America/Chicago",
-  BIL: "America/Denver",
-  BIS: "America/Chicago",
-  BLI: "America/Los_Angeles",
-  BMI: "America/Chicago",
-  BOI: "America/Boise",
-  BUF: "America/New_York",
-  BUR: "America/Los_Angeles",
-  BTV: "America/New_York",
-  CAE: "America/New_York",
-  CAK: "America/New_York",
-  CHA: "America/New_York",
-  CHS: "America/New_York",
-  CID: "America/Chicago",
-  COS: "America/Denver",
-  CRP: "America/Chicago",
-  CRW: "America/New_York",
-  DAY: "America/New_York",
-  DRO: "America/Denver",
-  DSM: "America/Chicago",
-  DTW: "America/Detroit",
-  ELP: "America/Denver",
-  EUG: "America/Los_Angeles",
-  EYW: "America/New_York",
-  FAR: "America/Chicago",
-  FAT: "America/Los_Angeles",
-  FAY: "America/New_York",
-  FSD: "America/Chicago",
-  GEG: "America/Los_Angeles",
-  GRB: "America/Chicago",
-  GRR: "America/Detroit",
-  GSO: "America/New_York",
-  GSP: "America/New_York",
-  GTF: "America/Denver",
-  HDN: "America/Denver",
-  HPN: "America/New_York",
-  HSV: "America/Chicago",
-  ICT: "America/Chicago",
-  IDA: "America/Boise",
-  ILM: "America/New_York",
-  JAC: "America/Denver",
-  JAN: "America/Chicago",
-  JAX: "America/New_York",
-  JNU: "America/Juneau",
-  LEG: "America/New_York",
-  LEX: "America/New_York",
-  LIT: "America/Chicago",
-  LBB: "America/Chicago",
-  LFT: "America/Chicago",
-  LNK: "America/Chicago",
-  MAF: "America/Chicago",
-  MDT: "America/New_York",
-  MDW: "America/Chicago",
-  MEM: "America/Chicago",
-  MFR: "America/Los_Angeles",
-  MHT: "America/New_York",
-  MLI: "America/Chicago",
-  MOB: "America/Chicago",
-  MRY: "America/Los_Angeles",
-  MSN: "America/Chicago",
-  MSY: "America/Chicago",
-  MYR: "America/New_York",
-  OKC: "America/Chicago",
-  OMA: "America/Chicago",
-  ORF: "America/New_York",
-  PBI: "America/New_York",
-  PNS: "America/Chicago",
-  PSC: "America/Los_Angeles",
-  PSP: "America/Los_Angeles",
-  PWM: "America/New_York",
-  RAP: "America/Denver",
-  RDM: "America/Los_Angeles",
-  RIC: "America/New_York",
-  ROC: "America/New_York",
-  RSW: "America/New_York",
-  SAV: "America/New_York",
-  SBA: "America/Los_Angeles",
-  SBN: "America/Indiana/Indianapolis",
-  SDF: "America/New_York",
-  SGF: "America/Chicago",
-  SHV: "America/Chicago",
-  SPI: "America/Chicago",
-  SRQ: "America/New_York",
-  STT: "America/St_Thomas",
-  STX: "America/St_Thomas",
-  SYR: "America/New_York",
-  TUL: "America/Chicago",
-  TUS: "America/Phoenix",
-  TYS: "America/New_York",
-  VPS: "America/Chicago",
-  XNA: "America/Chicago",
-  CAI: "Africa/Cairo",
-  AGA: "Africa/Casablanca",
-  AGB: "Europe/Berlin",
-  AJA: "Europe/Paris",
-  AMS: "Europe/Amsterdam",
-  AOI: "Europe/Rome",
-  AOT: "Europe/Rome",
-  BEG: "Europe/Belgrade",
-  BGO: "Europe/Oslo",
-  BIO: "Europe/Madrid",
-  BLQ: "Europe/Rome",
-  BOD: "Europe/Paris",
-  BRI: "Europe/Rome",
-  BRN: "Europe/Zurich",
-  BRS: "Europe/London",
-  BRU: "Europe/Brussels",
-  BTS: "Europe/Bratislava",
-  BUD: "Europe/Budapest",
-  CAG: "Europe/Rome",
-  CTA: "Europe/Rome",
-  DBV: "Europe/Zagreb",
-  DRS: "Europe/Berlin",
-  DTN: "Europe/Berlin",
-  EDI: "Europe/London",
-  FAO: "Europe/Lisbon",
-  FLR: "Europe/Rome",
-  FNC: "Atlantic/Madeira",
-  FNI: "Europe/Paris",
-  FUE: "Atlantic/Canary",
-  GLA: "Europe/London",
-  GOA: "Europe/Rome",
-  GOT: "Europe/Stockholm",
-  GRO: "Europe/Madrid",
-  GRX: "Europe/Madrid",
-  HAJ: "Europe/Berlin",
-  HHN: "Europe/Berlin",
-  IBZ: "Europe/Madrid",
-  INN: "Europe/Vienna",
-  INV: "Europe/London",
-  JSI: "Europe/Athens",
-  JTR: "Europe/Athens",
-  KEF: "Atlantic/Reykjavik",
-  KGS: "Europe/Athens",
-  KRK: "Europe/Warsaw",
-  KTW: "Europe/Warsaw",
-  LBA: "Europe/London",
-  LCA: "Asia/Nicosia",
-  LCG: "Europe/Madrid",
-  LEJ: "Europe/Berlin",
-  LIL: "Europe/Paris",
-  LJU: "Europe/Ljubljana",
-  LPA: "Atlantic/Canary",
-  LPL: "Europe/London",
-  LUX: "Europe/Luxembourg",
-  LYS: "Europe/Paris",
-  MAH: "Europe/Madrid",
-  MLA: "Europe/Malta",
-  MRS: "Europe/Paris",
-  MSQ: "Europe/Minsk",
-  NCE: "Europe/Paris",
-  NCL: "Europe/London",
-  NUE: "Europe/Berlin",
-  OLB: "Europe/Rome",
-  OTP: "Europe/Bucharest",
-  PFO: "Asia/Nicosia",
-  PMF: "Europe/Rome",
-  PMI: "Europe/Madrid",
-  PMO: "Europe/Rome",
-  PSA: "Europe/Rome",
-  PSO: "Europe/Rome",
-  PUY: "Europe/Zagreb",
-  REK: "Atlantic/Reykjavik",
-  RHO: "Europe/Athens",
-  RIX: "Europe/Riga",
-  RNS: "Europe/Paris",
-  SCQ: "Europe/Madrid",
-  SKG: "Europe/Athens",
-  SMI: "Europe/Athens",
-  SOF: "Europe/Sofia",
-  SOU: "Europe/London",
-  STR: "Europe/Berlin",
-  SVG: "Europe/Oslo",
-  SXB: "Europe/Paris",
-  SXF: "Europe/Berlin",
-  SZG: "Europe/Vienna",
-  TFS: "Atlantic/Canary",
-  TGD: "Europe/Podgorica",
-  TIA: "Europe/Tirane",
-  TLL: "Europe/Tallinn",
-  TLS: "Europe/Paris",
-  TMP: "Europe/Helsinki",
-  TNG: "Africa/Casablanca",
-  TRD: "Europe/Oslo",
-  TRN: "Europe/Rome",
-  TRS: "Europe/Rome",
-  TXL: "Europe/Berlin",
-  VAR: "Europe/Sofia",
-  VLC: "Europe/Madrid",
-  VNO: "Europe/Vilnius",
-  VRN: "Europe/Rome",
-  WRO: "Europe/Warsaw",
-  ZAG: "Europe/Zagreb",
-  ZTH: "Europe/Athens",
-  ABJ: "Africa/Abidjan",
-  ABV: "Africa/Lagos",
-  ACC: "Africa/Accra",
-  ADD: "Africa/Addis_Ababa",
-  ALG: "Africa/Algiers",
-  BKO: "Africa/Bamako",
-  BZV: "Africa/Brazzaville",
-  CKY: "Africa/Conakry",
-  CPT: "Africa/Johannesburg",
-  DKR: "Africa/Dakar",
-  DUR: "Africa/Johannesburg",
-  EBB: "Africa/Kampala",
-  FIH: "Africa/Kinshasa",
-  FNA: "Africa/Freetown",
-  HRE: "Africa/Harare",
-  JIB: "Africa/Djibouti",
-  JNB: "Africa/Johannesburg",
-  KGL: "Africa/Kigali",
-  LOS: "Africa/Lagos",
-  LUN: "Africa/Lusaka",
-  LAD: "Africa/Luanda",
-  MBA: "Africa/Nairobi",
-  MGQ: "Africa/Mogadishu",
-  MIR: "Africa/Tunis",
-  MPM: "Africa/Maputo",
-  MRU: "Indian/Mauritius",
-  NBO: "Africa/Nairobi",
-  NIM: "Africa/Niamey",
-  OUA: "Africa/Ouagadougou",
-  PLZ: "Africa/Johannesburg",
-  RAJ: "Asia/Kolkata",
-  RUN: "Indian/Reunion",
-  SEZ: "Indian/Mahe",
-  SSU: "Africa/Johannesburg",
-  TIP: "Africa/Tripoli",
-  TUN: "Africa/Tunis",
-  WDH: "Africa/Windhoek",
-  ZNZ: "Africa/Dar_es_Salaam",
-  ADB: "Europe/Istanbul",
-  AHB: "Asia/Riyadh",
-  AJF: "Asia/Riyadh",
-  ALA: "Asia/Almaty",
-  AYT: "Europe/Istanbul",
-  BAH: "Asia/Bahrain",
-  BGW: "Asia/Baghdad",
-  DMM: "Asia/Riyadh",
-  EBL: "Asia/Baghdad",
-  ESB: "Europe/Istanbul",
-  FRU: "Asia/Bishkek",
-  GYD: "Asia/Baku",
-  HAS: "Asia/Riyadh",
-  HBE: "Africa/Cairo",
-  HRG: "Africa/Cairo",
-  KWI: "Asia/Kuwait",
-  MCT: "Asia/Muscat",
-  MED: "Asia/Riyadh",
-  NQY: "Europe/London",
-  SAW: "Europe/Istanbul",
-  SSH: "Africa/Cairo",
-  TZX: "Europe/Istanbul",
-  UIN: "Asia/Riyadh",
-  AMD: "Asia/Kolkata",
-  ATQ: "Asia/Kolkata",
-  BBI: "Asia/Kolkata",
-  BKI: "Asia/Kuching",
-  BWN: "Asia/Brunei",
-  CCU: "Asia/Kolkata",
-  CEB: "Asia/Manila",
-  CGY: "Asia/Manila",
-  CIT: "Asia/Almaty",
-  CMB: "Asia/Colombo",
-  CNX: "Asia/Bangkok",
-  COK: "Asia/Kolkata",
-  CRK: "Asia/Manila",
-  CTS: "Asia/Tokyo",
-  DAC: "Asia/Dhaka",
-  DAD: "Asia/Ho_Chi_Minh",
-  DPS: "Asia/Makassar",
-  DVO: "Asia/Manila",
-  FOC: "Asia/Shanghai",
-  FUK: "Asia/Tokyo",
-  GAU: "Asia/Kolkata",
-  GOI: "Asia/Kolkata",
-  GUM: "Pacific/Guam",
-  HAN: "Asia/Bangkok",
-  HGH: "Asia/Shanghai",
-  HKT: "Asia/Bangkok",
-  HYD: "Asia/Kolkata",
-  ISB: "Asia/Karachi",
-  JED: "Asia/Riyadh",
-  KHH: "Asia/Taipei",
-  KHI: "Asia/Karachi",
-  KMG: "Asia/Shanghai",
-  KNO: "Asia/Jakarta",
-  KTM: "Asia/Kathmandu",
-  LHE: "Asia/Karachi",
-  MAA: "Asia/Kolkata",
-  MDL: "Asia/Yangon",
-  MFU: "Asia/Vientiane",
-  NAG: "Asia/Kolkata",
-  NGO: "Asia/Tokyo",
-  OKA: "Asia/Tokyo",
-  PAT: "Asia/Kolkata",
-  PEN: "Asia/Kuala_Lumpur",
-  PKX: "Asia/Shanghai",
-  PNH: "Asia/Phnom_Penh",
-  PQC: "Asia/Ho_Chi_Minh",
-  REP: "Asia/Phnom_Penh",
-  RGN: "Asia/Yangon",
-  RUH: "Asia/Riyadh",
-  SGN: "Asia/Ho_Chi_Minh",
-  SHE: "Asia/Shanghai",
-  SPX: "Africa/Cairo",
-  SUB: "Asia/Jakarta",
-  SZX: "Asia/Shanghai",
-  TAO: "Asia/Shanghai",
-  TAS: "Asia/Tashkent",
-  TRV: "Asia/Kolkata",
-  UTH: "Asia/Bangkok",
-  VTE: "Asia/Vientiane",
-  WUH: "Asia/Shanghai",
-  XIY: "Asia/Shanghai",
-  XMN: "Asia/Shanghai",
-  YNT: "Asia/Shanghai",
 };
 
 const timeZoneFormatters: Record<string, Intl.DateTimeFormat> = {};
@@ -908,6 +584,9 @@ export default function Home() {
   const [generatedUrl, setGeneratedUrl] = useState("");
   // Admin-only: show/hide raw booking URL
   const [showLink, setShowLink] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [justGenerated, setJustGenerated] = useState(false);
+  const [genKey, setGenKey] = useState(0);
 
   useEffect(() => {
     try {
@@ -1080,8 +759,18 @@ export default function Home() {
   }, 0);
 
   const handleGenerate = () => {
-    const url = generateAALink(segments, passengerGroups);
-    setGeneratedUrl(url);
+    if (segments.length === 0 || isGenerating) return;
+    setIsGenerating(true);
+    setJustGenerated(false);
+    // short delay so the plane animation is visible
+    window.setTimeout(() => {
+      const url = generateAALink(segments, passengerGroups);
+      setGeneratedUrl(url);
+      setIsGenerating(false);
+      setJustGenerated(true);
+      setGenKey((k) => k + 1);
+      window.setTimeout(() => setJustGenerated(false), 2200);
+    }, 700);
   };
 
   const handleOpenLink = () => {
@@ -1097,7 +786,7 @@ export default function Home() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center">
+      <div className="min-h-screen sky-gradient flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
@@ -1105,13 +794,16 @@ export default function Home() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-[#0c0c0f] flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-900/20 via-transparent to-transparent" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/5 rounded-full blur-3xl" />
+      <div className="min-h-screen sky-gradient flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-500/20 via-transparent to-transparent" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-sky-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-16 left-[10%] w-32 h-10 rounded-full bg-white/5 blur-xl anim-float" />
+        <div className="absolute top-32 right-[15%] w-48 h-12 rounded-full bg-sky-200/5 blur-2xl anim-float-slow" />
+        <div className="absolute bottom-24 left-[20%] w-40 h-10 rounded-full bg-white/5 blur-xl anim-float-slow" />
         <div className="relative w-full max-w-md">
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+          <div className="glass-card rounded-2xl p-8 shadow-2xl anim-fade-up">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 mb-4 shadow-lg shadow-red-500/20">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 mb-4 shadow-lg shadow-sky-500/25">
                 <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
@@ -1126,7 +818,7 @@ export default function Home() {
                   type="text"
                   value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/40 transition"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40 transition"
                   placeholder="username"
                   autoFocus
                 />
@@ -1137,7 +829,7 @@ export default function Home() {
                   type="password"
                   value={loginPass}
                   onChange={(e) => setLoginPass(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/40 transition"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-500/40 transition"
                   placeholder="••••••••"
                 />
               </div>
@@ -1146,7 +838,7 @@ export default function Home() {
               )}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-red-500/20"
+                className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-medium py-3 rounded-xl transition shadow-lg shadow-sky-500/25"
               >
                 Sign in
               </button>
@@ -1158,11 +850,21 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0c0c0f] text-white">
-      <header className="border-b border-white/5 bg-white/[0.02] backdrop-blur-md sticky top-0 z-50">
+    <div className="min-h-screen sky-gradient text-white relative">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
+        <div className="absolute top-20 left-[8%] w-40 h-12 rounded-full bg-white/[0.03] blur-2xl anim-float" />
+        <div className="absolute top-48 right-[12%] w-56 h-14 rounded-full bg-sky-400/[0.04] blur-3xl anim-float-slow" />
+        <div className="absolute bottom-32 left-[25%] w-48 h-12 rounded-full bg-indigo-400/[0.04] blur-2xl anim-float" />
+        <div className="absolute top-[40%] right-[5%] text-sky-400/10">
+          <svg className="w-24 h-24 rotate-12" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
+          </svg>
+        </div>
+      </div>
+      <header className="border-b border-sky-500/10 bg-slate-950/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
@@ -1173,7 +875,7 @@ export default function Home() {
             <span className="text-xs text-white/40 hidden sm:inline">
               {currentUser.username}
               {currentUser.role === "admin" && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 text-[10px]">admin</span>
+                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px]">admin</span>
               )}
             </span>
             {currentUser.role === "admin" && (
@@ -1182,7 +884,7 @@ export default function Home() {
                   onClick={toggleShowLink}
                   className={`text-xs px-3 py-1.5 rounded-lg border transition ${
                     showLink
-                      ? "border-red-500/40 bg-red-500/15 text-red-300"
+                      ? "border-sky-400/50 bg-sky-500/20 text-sky-200"
                       : "border-white/10 hover:bg-white/5 text-white/60 hover:text-white"
                   }`}
                   title="Show or hide the generated URL"
@@ -1209,8 +911,8 @@ export default function Home() {
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
         {showUsers && currentUser.role === "admin" && (
-          <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-            <h2 className="text-sm font-medium text-white/80 mb-4">User management</h2>
+          <section className="glass-card rounded-2xl p-6 anim-fade-up">
+            <h2 className="text-sm font-medium text-sky-100/90 mb-4">User management</h2>
             <div className="space-y-2 mb-5">
               {users.map((u) => (
                 <div
@@ -1219,13 +921,13 @@ export default function Home() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium">{u.username}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${u.role === "admin" ? "bg-red-500/20 text-red-300" : "bg-white/10 text-white/40"}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${u.role === "admin" ? "bg-sky-500/20 text-sky-300" : "bg-white/10 text-white/40"}`}>
                       {u.role}
                     </span>
                   </div>
                   <button
                     onClick={() => removeUser(u.username)}
-                    className="text-xs text-white/30 hover:text-red-400 transition"
+                    className="text-xs text-sky-200/35 hover:text-sky-400 transition"
                   >
                     remove
                   </button>
@@ -1238,7 +940,7 @@ export default function Home() {
                 <input
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-sky-500/40"
                   placeholder="username"
                 />
               </div>
@@ -1248,7 +950,7 @@ export default function Home() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-1 focus:ring-sky-500/40"
                   placeholder="password"
                 />
               </div>
@@ -1257,7 +959,7 @@ export default function Home() {
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as "admin" | "user")}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500/40"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500/40"
                 >
                   <option value="user">user</option>
                   <option value="admin">admin</option>
@@ -1265,7 +967,7 @@ export default function Home() {
               </div>
               <button
                 onClick={addUser}
-                className="bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-sky-600 hover:bg-sky-500 text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 Add
               </button>
@@ -1273,11 +975,11 @@ export default function Home() {
           </section>
         )}
 
-        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-1">1. GDS lines</h2>
-          <p className="text-xs text-white/30 mb-4">Paste Sabre availability / itinerary lines</p>
+        <section className="glass-card rounded-2xl p-6 anim-fade-up">
+          <h2 className="text-sm font-medium text-sky-100/90 mb-1">1. GDS lines</h2>
+          <p className="text-xs text-sky-200/35 mb-4">Paste Sabre availability / itinerary lines</p>
           <textarea
-            className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/30 transition resize-y"
+            className="w-full h-28 p-4 bg-black/30 border border-white/10 rounded-xl font-mono text-sm text-white/90 placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500/30 transition resize-y"
             placeholder={`1 AA 763I 31DEC Q MUCCLT*SS2 1020A 245P /DCAA /E
 2 AA2305I 31DEC Q CLTDEN*HK2 456P 635P /DCAA /E
 3 BA 176O 30JAN J JFKLHR*GK2 705P 705A 31JAN S /DCBA /E
@@ -1288,19 +990,19 @@ export default function Home() {
           <div className="mt-4 flex items-center gap-3">
             <button
               onClick={handleParse}
-              className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-red-500/10"
+              className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-sky-500/20"
             >
               Parse
             </button>
-            <span className="text-xs text-white/30">
+            <span className="text-xs text-sky-200/35">
               {segments.length > 0 ? `${segments.length} segment(s)` : "no segments"}
             </span>
           </div>
         </section>
 
-        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-1">2. Segments</h2>
-          <p className="text-xs text-white/30 mb-4">
+        <section className="glass-card rounded-2xl p-6 anim-fade-up">
+          <h2 className="text-sm font-medium text-sky-100/90 mb-1">2. Segments</h2>
+          <p className="text-xs text-sky-200/35 mb-4">
             Edit cabin and the new direction flag
           </p>
           {segments.length === 0 ? (
@@ -1323,31 +1025,31 @@ export default function Home() {
                   {segments.map((seg) => (
                     <tr key={seg.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                       <td className="py-2 px-1">
-                        <input className="w-11 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.cc} onChange={(e) => updateSegment(seg.id, "cc", e.target.value.toUpperCase())} />
+                        <input className="w-11 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.cc} onChange={(e) => updateSegment(seg.id, "cc", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-14 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.num} onChange={(e) => updateSegment(seg.id, "num", e.target.value)} />
+                        <input className="w-14 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.num} onChange={(e) => updateSegment(seg.id, "num", e.target.value)} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-9 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.cls} onChange={(e) => updateSegment(seg.id, "cls", e.target.value.toUpperCase())} />
+                        <input className="w-9 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.cls} onChange={(e) => updateSegment(seg.id, "cls", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-16 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.cabin} onChange={(e) => updateSegment(seg.id, "cabin", e.target.value.toUpperCase())} />
+                        <input className="w-16 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.cabin} onChange={(e) => updateSegment(seg.id, "cabin", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.orig} onChange={(e) => updateSegment(seg.id, "orig", e.target.value.toUpperCase())} />
+                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.orig} onChange={(e) => updateSegment(seg.id, "orig", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dest} onChange={(e) => updateSegment(seg.id, "dest", e.target.value.toUpperCase())} />
+                        <input className="w-12 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-center text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.dest} onChange={(e) => updateSegment(seg.id, "dest", e.target.value.toUpperCase())} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.dep_local} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.dep_local} onChange={(e) => updateSegment(seg.id, "dep_local", e.target.value)} />
                       </td>
                       <td className="py-2 px-1">
-                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-500/40" value={seg.arr_local} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
+                        <input className="w-32 bg-black/40 border border-white/10 rounded-lg px-1.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500/40" value={seg.arr_local} onChange={(e) => updateSegment(seg.id, "arr_local", e.target.value)} />
                       </td>
                       <td className="py-2 px-1 text-center">
-                        <input type="checkbox" checked={seg.new_dir} onChange={(e) => updateSegment(seg.id, "new_dir", e.target.checked)} className="w-4 h-4 accent-red-500" />
+                        <input type="checkbox" checked={seg.new_dir} onChange={(e) => updateSegment(seg.id, "new_dir", e.target.checked)} className="w-4 h-4 accent-sky-500" />
                       </td>
                     </tr>
                   ))}
@@ -1363,15 +1065,15 @@ export default function Home() {
           </button>
         </section>
 
-        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-4">3. Passengers</h2>
+        <section className="glass-card rounded-2xl p-6 anim-fade-up">
+          <h2 className="text-sm font-medium text-sky-100/90 mb-4">3. Passengers</h2>
           <div className="max-w-md space-y-3">
             {passengerGroups.map((group) => (
               <div key={group.id} className="flex items-end gap-2">
                 <div>
                   <label className="block text-xs text-white/40 mb-1.5">Type</label>
                   <select
-                    className="w-36 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    className="w-36 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30"
                     value={group.code}
                     onChange={(e) =>
                       updatePassengerGroup(group.id, "code", e.target.value)
@@ -1390,7 +1092,7 @@ export default function Home() {
                     type="number"
                     min={0}
                     max={9}
-                    className="w-20 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    className="w-20 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30"
                     value={group.count}
                     onChange={(e) =>
                       updatePassengerGroup(group.id, "count", e.target.value)
@@ -1416,30 +1118,60 @@ export default function Home() {
               >
                 + add type
               </button>
-              <span className="text-xs text-white/30">total {passengerTotal || 1}</span>
+              <span className="text-xs text-sky-200/35">total {passengerTotal || 1}</span>
             </div>
           </div>
         </section>
 
-        <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-          <h2 className="text-sm font-medium text-white/80 mb-4">4. Generate</h2>
+        <section className={`glass-card rounded-2xl p-6 anim-fade-up relative overflow-hidden ${justGenerated ? "generate-flash" : ""}`}>
+          {/* runway accent line */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-sky-400/40 to-transparent" />
+
+          <h2 className="text-sm font-medium text-sky-100/90 mb-4 flex items-center gap-2">
+            <span className="inline-flex w-6 h-6 items-center justify-center rounded-md bg-sky-500/15 text-sky-300">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </span>
+            4. Generate
+          </h2>
+
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleGenerate}
-              disabled={segments.length === 0}
-              className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 disabled:from-white/10 disabled:to-white/10 disabled:text-white/30 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-red-500/10 disabled:shadow-none"
+              disabled={segments.length === 0 || isGenerating}
+              className="btn-primary relative overflow-hidden text-white px-6 py-2.5 rounded-xl text-sm font-medium disabled:text-white/30"
             >
-              Generate booking
+              {isGenerating ? (
+                <span className="inline-flex items-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  Building link…
+                </span>
+              ) : justGenerated ? (
+                <span className="inline-flex items-center gap-2 anim-success">
+                  <svg className="w-4 h-4 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Link ready
+                </span>
+              ) : (
+                "Generate booking"
+              )}
             </button>
-            {generatedUrl && (
+
+            {generatedUrl && !isGenerating && (
               <button
+                key={genKey}
                 type="button"
                 onClick={handleOpenLink}
                 onContextMenu={(e) => e.preventDefault()}
                 onMouseDown={(e) => {
                   if (e.button === 2) e.preventDefault();
                 }}
-                className="inline-flex items-center gap-2 bg-white text-black hover:bg-white/90 px-5 py-2.5 rounded-xl text-sm font-medium transition select-none"
+                className={`inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-sky-50 px-5 py-2.5 rounded-xl text-sm font-medium transition select-none anim-success ${justGenerated ? "anim-glow" : ""}`}
                 style={{ userSelect: "none", WebkitUserSelect: "none" }}
               >
                 Open link
@@ -1450,16 +1182,42 @@ export default function Home() {
             )}
           </div>
 
+          {/* plane flight animation while generating */}
+          {isGenerating && (
+            <div className="relative mt-5 h-10 overflow-hidden rounded-xl bg-slate-900/50 border border-sky-500/10">
+              <div className="absolute inset-y-0 left-0 right-0 flex items-center">
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-sky-500/30 to-transparent" />
+              </div>
+              <div className="absolute top-1/2 -translate-y-1/2 anim-plane text-sky-300">
+                <svg className="w-7 h-7 drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
+                </svg>
+              </div>
+              <div className="absolute bottom-1 left-3 right-3 flex justify-between opacity-40">
+                {[...Array(8)].map((_, i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-sky-400" style={{ animation: `runway-lights 1s ease-in-out ${i * 0.1}s infinite` }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {justGenerated && !isGenerating && (
+            <p key={`msg-${genKey}`} className="mt-3 text-xs text-emerald-300/90 anim-fade-up flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              New booking link created
+            </p>
+          )}
+
           {currentUser.role === "admin" && showLink && generatedUrl && (
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-2 anim-fade-up">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-white/40">Generated URL (admin)</p>
+                <p className="text-xs text-sky-200/50">Generated URL (admin)</p>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard?.writeText(generatedUrl).catch(() => {});
                   }}
-                  className="text-[11px] px-2.5 py-1 rounded-lg border border-white/10 hover:bg-white/5 text-white/50 hover:text-white transition"
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-sky-500/20 hover:bg-sky-500/10 text-sky-200/60 hover:text-sky-100 transition"
                 >
                   Copy
                 </button>
@@ -1467,7 +1225,7 @@ export default function Home() {
               <textarea
                 readOnly
                 value={generatedUrl}
-                className="w-full h-24 p-3 bg-black/40 border border-white/10 rounded-xl font-mono text-[11px] text-white/70 focus:outline-none resize-y"
+                className="w-full h-24 p-3 input-field rounded-xl font-mono text-[11px] text-sky-100/70 resize-y"
               />
             </div>
           )}
@@ -1475,7 +1233,7 @@ export default function Home() {
       </main>
 
       <footer className="text-center text-[11px] text-white/15 py-8">
-        GDS Linker · internal use
+        GDS Linker · wheels up
       </footer>
     </div>
   );
