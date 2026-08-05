@@ -550,6 +550,106 @@ function generateAALink(
   return `https://www.aa.com/goto/metasearch?ITEN=${iten}`;
 }
 
+
+const DL_MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+/** Delta time token: 1041A → 10A, 905P → 09P (hour + A/P, no minutes) */
+function formatDeltaTime(localValue: string): string {
+  const local = parseDisplayDateTime(localValue);
+  if (!local) return "12A";
+  const h12 = local.hour % 12 || 12;
+  const ap = local.hour >= 12 ? "P" : "A";
+  return `${String(h12).padStart(2, "0")}${ap}`;
+}
+
+function formatDeltaDateParts(localValue: string): { mon: string; day: string; year: string } {
+  const local = parseDisplayDateTime(localValue);
+  if (!local) {
+    const now = new Date();
+    return {
+      mon: DL_MONTHS[now.getMonth()],
+      day: String(now.getDate()).padStart(2, "0"),
+      year: String(now.getFullYear()),
+    };
+  }
+  return {
+    mon: DL_MONTHS[local.month],
+    day: String(local.day).padStart(2, "0"),
+    year: String(local.year),
+  };
+}
+
+function groupDirections(segments: Segment[]): Segment[][] {
+  const directions: Segment[][] = [];
+  let currentDir: Segment[] = [];
+  segments.forEach((seg, idx) => {
+    if (seg.new_dir && idx > 0 && currentDir.length > 0) {
+      directions.push(currentDir);
+      currentDir = [];
+    }
+    currentDir.push(seg);
+  });
+  if (currentDir.length > 0) directions.push(currentDir);
+  return directions;
+}
+
+function generateDLLink(
+  segments: Segment[],
+  passengerGroups: { code: string; count: string }[]
+): string {
+  if (segments.length === 0) return "";
+
+  const { total } = buildPaxCode(passengerGroups);
+  const paxCount = Math.max(1, Math.min(9, total || 1));
+
+  const directions = groupDirections(segments);
+
+  // Map each segment → direction index
+  const dirIndexOf: number[] = [];
+  directions.forEach((dirSegs, dirIndex) => {
+    dirSegs.forEach(() => dirIndexOf.push(dirIndex));
+  });
+
+  const itinParts = segments.map((seg, i) => {
+    const { mon, day, year } = formatDeltaDateParts(seg.dep_local);
+    const time = formatDeltaTime(seg.dep_local);
+    const dir = dirIndexOf[i] ?? 0;
+    // itinSegment[n]=dir:class:orig:dest:carrier:flight:MON:DD:YYYY:HH{A|P}
+    return (
+      `itinSegment[${i}]=${dir}:${seg.cls}:${seg.orig}:${seg.dest}:` +
+      `${seg.cc}:${seg.num}:${mon}:${day}:${year}:${time}`
+    );
+  });
+
+  // fareBasis: use editable field or class-based placeholder per segment
+  const fareBasis = segments
+    .map((seg) => (seg.fare_basis && seg.fare_basis.trim()) || `${seg.cls}BASE`)
+    .join(":");
+
+  const params = [
+    "tripType=multiCity",
+    `paxCount=${paxCount}`,
+    "price=0",
+    "currencyCd=USD",
+    "exitCountry=US",
+    ...itinParts,
+    `fareBasis=${encodeURIComponent(fareBasis)}`,
+    `numOfSegments=${segments.length}`,
+  ];
+
+  return `https://www.delta.com/flight-search/search?${params.join("&")}`;
+}
+
+function generateBookingLink(
+  carrier: "AA" | "DL",
+  segments: Segment[],
+  passengerGroups: { code: string; count: string }[]
+): string {
+  return carrier === "DL"
+    ? generateDLLink(segments, passengerGroups)
+    : generateAALink(segments, passengerGroups);
+}
+
 function loadUsers(): User[] {
   if (typeof window === "undefined") return DEFAULT_USERS;
   try {
@@ -588,6 +688,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
   const [genKey, setGenKey] = useState(0);
+  const [carrier, setCarrier] = useState<"AA" | "DL">("AA");
 
   useEffect(() => {
     try {
@@ -765,7 +866,7 @@ export default function Home() {
     setJustGenerated(false);
     // short delay so the plane animation is visible
     window.setTimeout(() => {
-      const url = generateAALink(segments, passengerGroups);
+      const url = generateBookingLink(carrier, segments, passengerGroups);
       setGeneratedUrl(url);
       setIsGenerating(false);
       setJustGenerated(true);
@@ -775,7 +876,7 @@ export default function Home() {
   };
 
   const handleOpenLink = () => {
-    const url = generateAALink(segments, passengerGroups) || generatedUrl;
+    const url = generateBookingLink(carrier, segments, passengerGroups) || generatedUrl;
     if (!url) return;
     setGeneratedUrl(url);
     const w = window.open("about:blank", "_blank");
@@ -1136,6 +1237,35 @@ export default function Home() {
             </span>
             4. Generate
           </h2>
+
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-xs text-sky-200/40 mr-1">Airline</span>
+            <button
+              type="button"
+              onClick={() => { setCarrier("AA"); setGeneratedUrl(""); setJustGenerated(false); }}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition border ${
+                carrier === "AA"
+                  ? "bg-red-600/90 border-red-400/40 text-white shadow-lg shadow-red-600/20"
+                  : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              AA
+            </button>
+            <button
+              type="button"
+              onClick={() => { setCarrier("DL"); setGeneratedUrl(""); setJustGenerated(false); }}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition border ${
+                carrier === "DL"
+                  ? "bg-sky-600/90 border-sky-400/40 text-white shadow-lg shadow-sky-600/20"
+                  : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              DL
+            </button>
+            <span className="text-[11px] text-sky-200/30 ml-2">
+              {carrier === "AA" ? "American Airlines" : "Delta Air Lines"}
+            </span>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
