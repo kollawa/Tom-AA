@@ -131,7 +131,7 @@ const AIRPORT_TIME_ZONES: Record<string, string> = {
   IND: "America/Indiana/Indianapolis",
   IST: "Europe/Istanbul",
   JFK: "America/New_York",
-  KIN: "Jamaica/Kingston Manley",
+  KIN: "America/Jamaica",
   KIX: "Asia/Tokyo",
   KOA: "Pacific/Honolulu",
   KUL: "Asia/Kuala_Lumpur",
@@ -235,30 +235,86 @@ function pad(n: number, len = 2) {
   return n.toString().padStart(len, "0");
 }
 
+/** Sabre times: 1041A / 545P / 1200N (noon) / 1200M (midnight). */
 function parseTime(t: string): { h: number; m: number } | null {
-  const m = t.match(/^(\d{1,2})(\d{2})([AP])$/i);
+  const m = t.match(/^(\d{1,2})(\d{2})([APNM])$/i);
   if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = parseInt(m[2], 10);
   const ap = m[3].toUpperCase();
-  if (h < 1 || h > 12 || min < 0 || min > 59) return null;
+  if (min < 0 || min > 59) return null;
+
+  // N = noon (12:00), M = midnight (00:00)
+  if (ap === "N") {
+    if (h !== 12 && h !== 0) return null;
+    return { h: 12, m: min };
+  }
+  if (ap === "M") {
+    if (h !== 12 && h !== 0) return null;
+    return { h: 0, m: min };
+  }
+
+  if (h < 1 || h > 12) return null;
   if (ap === "P" && h !== 12) h += 12;
   if (ap === "A" && h === 12) h = 0;
   return { h, m: min };
 }
 
+/** Gregorian leap year (2024/2028 leap; 2026 & 2027 are not). */
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/** Days in month (0=Jan … 11=Dec), leap-aware. */
+function daysInMonth(year: number, month: number): number {
+  const lengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month === 1) return isLeapYear(year) ? 29 : 28;
+  return lengths[month] ?? 30;
+}
+
+function isValidCalendarDate(year: number, month: number, day: number): boolean {
+  if (!Number.isFinite(year) || month < 0 || month > 11 || day < 1) return false;
+  return day <= daysInMonth(year, month);
+}
+
+/**
+ * Parse Sabre date like 25APR / 29FEB.
+ * - Picks a real calendar day (no Date.UTC overflow: 29FEB in 2026/2027 is invalid).
+ * - Without yearHint: next occurrence on/after today (skips non-leap years for 29FEB).
+ * - With yearHint (arrival tied to dep year): uses that year, then advances if past/invalid.
+ */
 function parseDate(d: string, yearHint?: number): CalendarDate | null {
   const m = d.match(/^(\d{1,2})([A-Z]{3})$/i);
   if (!m) return null;
   const day = parseInt(m[1], 10);
   const mon = MONTHS[m[2].toUpperCase()];
-  if (mon === undefined) return null;
+  if (mon === undefined || day < 1 || day > 31) return null;
+
   const now = new Date();
-  let year = yearHint ?? now.getFullYear();
-  const candidate = Date.UTC(year, mon, day);
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  if (!yearHint && candidate < today) year += 1;
-  return { year, month: mon, day };
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (yearHint !== undefined) {
+    let year = yearHint;
+    // Find a valid year at/after yearHint (handles 29FEB → next leap year)
+    for (let i = 0; i < 12; i++) {
+      const y = yearHint + i;
+      if (!isValidCalendarDate(y, mon, day)) continue;
+      return { year: y, month: mon, day };
+    }
+    return null;
+  }
+
+  // No year hint: first valid date on or after today (search up to 12 years)
+  const startYear = now.getFullYear();
+  for (let i = 0; i < 12; i++) {
+    const y = startYear + i;
+    if (!isValidCalendarDate(y, mon, day)) continue;
+    const candidate = Date.UTC(y, mon, day);
+    if (candidate >= todayUtc) {
+      return { year: y, month: mon, day };
+    }
+  }
+  return null;
 }
 
 function addDays(local: LocalDateTime, days: number): LocalDateTime {
@@ -273,15 +329,29 @@ function addDays(local: LocalDateTime, days: number): LocalDateTime {
 }
 
 function addYear(date: CalendarDate): CalendarDate {
-  return { ...date, year: date.year + 1 };
+  let year = date.year + 1;
+  let day = date.day;
+  // 29FEB + 1 year into non-leap → clamp to 28FEB (not 01MAR via UTC overflow)
+  if (!isValidCalendarDate(year, date.month, day)) {
+    day = daysInMonth(year, date.month);
+  }
+  return { year, month: date.month, day };
 }
 
 function dateKey(date: CalendarDate): number {
+  // Guard against invalid calendar days before building timestamps
+  if (!isValidCalendarDate(date.year, date.month, date.day)) {
+    const day = daysInMonth(date.year, date.month);
+    return Date.UTC(date.year, date.month, day);
+  }
   return Date.UTC(date.year, date.month, date.day);
 }
 
 function localComparableMs(local: LocalDateTime): number {
-  return Date.UTC(local.year, local.month, local.day, local.hour, local.minute);
+  const day = isValidCalendarDate(local.year, local.month, local.day)
+    ? local.day
+    : daysInMonth(local.year, local.month);
+  return Date.UTC(local.year, local.month, day, local.hour, local.minute);
 }
 
 function combineDateTime(date: CalendarDate, time: { h: number; m: number }): LocalDateTime {
@@ -417,7 +487,7 @@ function parseSabreLine(line: string): Segment | null {
   const orig = cityMatch[1].toUpperCase();
   const dest = cityMatch[2].toUpperCase();
   rest = rest.slice(cityMatch[0].length).trim();
-  const timeMatch = rest.match(/^(\d{1,4}[AP])\s+(\d{1,4}[AP])/i);
+  const timeMatch = rest.match(/^(\d{1,4}[APNM])\s+(\d{1,4}[APNM])/i);
   if (!timeMatch) return null;
   const depTimeStr = timeMatch[1].toUpperCase();
   const arrTimeStr = timeMatch[2].toUpperCase();
@@ -972,6 +1042,30 @@ export default function Home() {
               </svg>
             </div>
             <span className="font-semibold tracking-tight">GDS Linker</span>
+            <div className="ml-2 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => { setCarrier("AA"); setGeneratedUrl(""); setJustGenerated(false); }}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition border ${
+                  carrier === "AA"
+                    ? "bg-red-600/90 border-red-400/40 text-white shadow-md shadow-red-600/20"
+                    : "bg-white/5 border-white/10 text-white/45 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                AA
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCarrier("DL"); setGeneratedUrl(""); setJustGenerated(false); }}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition border ${
+                  carrier === "DL"
+                    ? "bg-sky-600/90 border-sky-400/40 text-white shadow-md shadow-sky-600/20"
+                    : "bg-white/5 border-white/10 text-white/45 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                DL
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-white/40 hidden sm:inline">
@@ -1238,34 +1332,6 @@ export default function Home() {
             4. Generate
           </h2>
 
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-xs text-sky-200/40 mr-1">Airline</span>
-            <button
-              type="button"
-              onClick={() => { setCarrier("AA"); setGeneratedUrl(""); setJustGenerated(false); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition border ${
-                carrier === "AA"
-                  ? "bg-red-600/90 border-red-400/40 text-white shadow-lg shadow-red-600/20"
-                  : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              AA
-            </button>
-            <button
-              type="button"
-              onClick={() => { setCarrier("DL"); setGeneratedUrl(""); setJustGenerated(false); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition border ${
-                carrier === "DL"
-                  ? "bg-sky-600/90 border-sky-400/40 text-white shadow-lg shadow-sky-600/20"
-                  : "bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              DL
-            </button>
-            <span className="text-[11px] text-sky-200/30 ml-2">
-              {carrier === "AA" ? "American Airlines" : "Delta Air Lines"}
-            </span>
-          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
