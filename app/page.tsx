@@ -1163,13 +1163,40 @@ export default function Home() {
   };
 
   const handleOpenLink = () => {
+    // Rebuild at click time so pax/carrier changes are always reflected
     const url = generateBookingLink(carrier, segments, passengerGroups) || generatedUrl;
     if (!url) return;
     setGeneratedUrl(url);
+
+    // Mask: open blank tab first, then navigate so the long metasearch URL
+    // is not shown as a "link" and address bar settles on the final airline page.
+    // Do NOT pass noopener here — it makes window.open return null and breaks the mask.
     const w = window.open("about:blank", "_blank");
-    if (w) {
+    if (!w) {
+      // popup blocked — cannot mask; abort rather than navigating this tab
+      return;
+    }
+    try {
       w.opener = null;
-      w.location.replace(url);
+      // Minimal redirect document: tab never keeps the raw deeplink in history;
+      // address bar settles on Skyscanner → final airline page only.
+      w.document.open();
+      w.document.write(
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
+          "<meta name=\"referrer\" content=\"no-referrer\">" +
+          "<title>Opening…</title>" +
+          "<script>location.replace(" +
+          JSON.stringify(url) +
+          ");</script>" +
+          "</head><body></body></html>"
+      );
+      w.document.close();
+    } catch {
+      try {
+        w.location.replace(url);
+      } catch {
+        /* ignore */
+      }
     }
   };
 
