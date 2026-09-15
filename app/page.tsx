@@ -710,14 +710,177 @@ function generateDLLink(
   return `https://www.delta.com/flight-search/search?${params.join("&")}`;
 }
 
-function generateBookingLink(
-  carrier: "AA" | "DL",
+
+/** Skyscanner numeric place IDs used in transport_deeplink (from live UA redirects). */
+const SKY_PLACE_IDS: Record<string, string> = {
+  AMS: "11235", ARN: "11154", ATH: "11121", ATL: "11168", AUH: "11165",
+  AUS: "11170", BCN: "9772", BER: "9828", BKK: "9947", BNA: "11172",
+  BOG: "9963", BOM: "9968", BOS: "11174", BRU: "10141", BUD: "10215",
+  BWI: "11176", CAI: "10337", CAN: "10349", CDG: "10413", CGK: "10451",
+  CLE: "11180", CLT: "11181", CMH: "11182", CPH: "10500", CUN: "10532",
+  DCA: "11185", DEL: "10595", DEN: "10959", DFW: "11187", DOH: "10634",
+  DUB: "10650", DUS: "11165", DXB: "10672", EWR: "11190", EZE: "10735",
+  FCO: "10788", FRA: "11616", FLL: "11193", GIG: "10910", GVA: "10950",
+  HAM: "10970", HEL: "10990", HKG: "11020", HNL: "11200", IAD: "11202",
+  IAH: "11203", ICN: "11080", IND: "11204", IST: "11110", JFK: "12712",
+  KUL: "11290", LAS: "11210", LAX: "11220", LGA: "11221", LGW: "13554",
+  LHR: "13542", LIM: "11320", LIS: "11340", MAD: "11420", MAN: "13880",
+  MCO: "11230", MEL: "11460", MEX: "11470", MIA: "11235", MNL: "11520",
+  MSP: "11240", MUC: "14385", MXP: "11560", NAP: "11580", NRT: "11640",
+  ORD: "11250", ORY: "11680", OSL: "11700", PDX: "11255", PEK: "11740",
+  PHL: "11260", PHX: "11265", PIT: "11270", PRG: "11820", PTY: "11840",
+  PVG: "11880", RDU: "11275", SAN: "11280", SAT: "11282", SCL: "11940",
+  SEA: "11285", SFO: "16216", SIN: "12020", SJC: "11290", SJD: "12040",
+  SJU: "12050", SLC: "11292", SNN: "12080", STL: "11295", SYD: "12140",
+  TLV: "12200", TPA: "11300", TPE: "12240", VCE: "12300", VIE: "12320",
+  WAW: "12380", YUL: "12440", YVR: "12460", YYZ: "12480", ZRH: "18563",
+};
+
+/** Skyscanner carrier IDs used in transport_deeplink itinerary. */
+const SKY_CARRIER_IDS: Record<string, string> = {
+  UA: "-31722",
+  LH: "-32090",
+  LX: "-31799",
+  AC: "-32057",
+  OS: "-32117",
+  SN: "-32480",
+  NH: "-32155",
+  NZ: "-32170",
+  SQ: "-32440",
+  TK: "-32500",
+  EK: "-32380",
+  QR: "-32400",
+  BA: "-32012",
+  AA: "-32001",
+  DL: "-32040",
+  AS: "-32020",
+  B6: "-32025",
+  WN: "-32540",
+  EI: "-32320",
+};
+
+const UA_SKY_AGENT = "uair";
+const UA_SKY_CARRIER = "-31722";
+
+function skyPlaceId(iata: string): string {
+  const code = iata.trim().toUpperCase();
+  return SKY_PLACE_IDS[code] || code;
+}
+
+function skyCarrierId(cc: string): string {
+  const code = cc.trim().toUpperCase();
+  return SKY_CARRIER_IDS[code] || UA_SKY_CARRIER;
+}
+
+function skyCabinClass(cls: string): { cabin: string; code: string } {
+  const c = (cls || "Y").toUpperCase();
+  if ("FAP".includes(c)) return { cabin: "first", code: "F" };
+  if ("JCDIZ".includes(c)) return { cabin: "business", code: "J" };
+  if ("WS".includes(c)) return { cabin: "premium_economy", code: "W" };
+  return { cabin: "economy", code: "Y" };
+}
+
+function formatSkyDateTime(localValue: string): string {
+  const local = parseDisplayDateTime(localValue);
+  if (!local) return "";
+  return `${local.year}-${pad(local.month + 1)}-${pad(local.day)}T${pad(local.hour)}:${pad(local.minute)}`;
+}
+
+function formatSkyDateOnly(localValue: string): string {
+  const local = parseDisplayDateTime(localValue);
+  if (!local) return "";
+  return `${local.year}-${pad(local.month + 1)}-${pad(local.day)}`;
+}
+
+/**
+ * Build Skyscanner → United (uair) transport_deeplink.
+ * Structure reverse-engineered from live UA booking redirects:
+ * /transport_deeplink/4.0/{market}/{locale}/{currency}/uair/{legs}/{orig.dest.date,...}/air/airli/flights
+ * itinerary=flight|{carrierId}|{num}|{origId}|{dep}|{destId}|{arr}|{mins}|{fare}|{cabin}|-
+ * Directions joined by ",", connection segments within a direction by ";"
+ */
+function generateUASkyLink(
   segments: Segment[],
   passengerGroups: { code: string; count: string }[]
 ): string {
-  return carrier === "DL"
-    ? generateDLLink(segments, passengerGroups)
-    : generateAALink(segments, passengerGroups);
+  if (segments.length === 0) return "";
+
+  const { total } = buildPaxCode(passengerGroups);
+  const paxCount = Math.max(1, Math.min(9, total || 1));
+  const directions = groupDirections(segments);
+
+  // Path: one origin.dest.date per direction (first.orig → last.dest of that dir)
+  const pathParts = directions.map((dirSegs) => {
+    const first = dirSegs[0];
+    const last = dirSegs[dirSegs.length - 1];
+    return `${skyPlaceId(first.orig)}.${skyPlaceId(last.dest)}.${formatSkyDateOnly(first.dep_local)}`;
+  });
+
+  // Itinerary: directions joined by ",", segments inside a direction by ";"
+  const itineraryDirs = directions.map((dirSegs) => {
+    return dirSegs
+      .map((seg) => {
+        const carrierId = skyCarrierId(seg.cc);
+        const origId = skyPlaceId(seg.orig);
+        const destId = skyPlaceId(seg.dest);
+        const dep = formatSkyDateTime(seg.dep_local);
+        const arr = formatSkyDateTime(seg.arr_local);
+        const mins = seg.dur && parseInt(seg.dur, 10) > 0 ? seg.dur : "0";
+        const fare = (seg.fare_basis && seg.fare_basis.trim()) || "-";
+        const { code: cabinCode } = skyCabinClass(seg.cls);
+        return `flight|${carrierId}|${seg.num}|${origId}|${dep}|${destId}|${arr}|${mins}|${fare}|${cabinCode}|-`;
+      })
+      .join(";");
+  });
+  const itinerary = itineraryDirs.join(",");
+
+  // carriers / operators: marketing carrier per segment; operators grouped by direction
+  const allCarrierIds = segments.map((s) => skyCarrierId(s.cc));
+  const carriers = [...new Set(allCarrierIds)].join(",");
+  const operators = directions
+    .map((dirSegs) => dirSegs.map((s) => skyCarrierId(s.cc)).join(","))
+    .join(";");
+
+  // Dominant cabin from first segment
+  const { cabin } = skyCabinClass(segments[0].cls);
+
+  const market = "US";
+  const locale = "en-US";
+  const currency = "USD";
+  const legCount = directions.length;
+
+  const base =
+    `https://www.skyscanner.com/transport_deeplink/4.0/${market}/${locale}/${currency}/` +
+    `${UA_SKY_AGENT}/${legCount}/${pathParts.join(",")}/air/airli/flights`;
+
+  const params = new URLSearchParams();
+  params.set("itinerary", itinerary);
+  params.set("carriers", carriers);
+  params.set("operators", operators);
+  params.set("passengers", String(paxCount));
+  params.set("cabin_class", cabin);
+  params.set("channel", "website");
+  params.set("client_id", "skyscanner_website");
+  params.set("commercial_filters", "false");
+  params.set("fare_type", "base_fare");
+  params.set("is_multipart", "false");
+  params.set("is_npt", "false");
+  params.set("isbp", "1");
+  params.set("pqid", "false");
+  params.set("sort", "BEST");
+  params.set("tabs", "CombinedDayView");
+
+  return `${base}?${params.toString()}`;
+}
+
+function generateBookingLink(
+  carrier: "AA" | "DL" | "UA",
+  segments: Segment[],
+  passengerGroups: { code: string; count: string }[]
+): string {
+  if (carrier === "DL") return generateDLLink(segments, passengerGroups);
+  if (carrier === "UA") return generateUASkyLink(segments, passengerGroups);
+  return generateAALink(segments, passengerGroups);
 }
 
 function loadUsers(): User[] {
@@ -758,7 +921,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
   const [genKey, setGenKey] = useState(0);
-  const [carrier, setCarrier] = useState<"AA" | "DL">("AA");
+  const [carrier, setCarrier] = useState<"AA" | "DL" | "UA">("AA");
 
   useEffect(() => {
     try {
@@ -1064,6 +1227,17 @@ export default function Home() {
                 }`}
               >
                 DL
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCarrier("UA"); setGeneratedUrl(""); setJustGenerated(false); }}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition border ${
+                  carrier === "UA"
+                    ? "bg-blue-700/90 border-blue-400/40 text-white shadow-md shadow-blue-700/20"
+                    : "bg-white/5 border-white/10 text-white/45 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                UA
               </button>
             </div>
           </div>
