@@ -1163,39 +1163,40 @@ export default function Home() {
   };
 
   const handleOpenLink = () => {
-    // Rebuild at click time so pax/carrier changes are always reflected
     const url = generateBookingLink(carrier, segments, passengerGroups) || generatedUrl;
     if (!url) return;
     setGeneratedUrl(url);
 
-    // Mask: open blank tab first, then navigate so the long metasearch URL
-    // is not shown as a "link" and address bar settles on the final airline page.
-    // Do NOT pass noopener here — it makes window.open return null and breaks the mask.
-    const w = window.open("about:blank", "_blank");
-    if (!w) {
-      // popup blocked — cannot mask; abort rather than navigating this tab
-      return;
-    }
+    // Mask: open via blob redirect so the tab never shows the raw deeplink
+    // in the address bar — only "Opening…" then the final airline page.
     try {
-      w.opener = null;
-      // Minimal redirect document: tab never keeps the raw deeplink in history;
-      // address bar settles on Skyscanner → final airline page only.
-      w.document.open();
-      w.document.write(
+      const html =
         "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
-          "<meta name=\"referrer\" content=\"no-referrer\">" +
-          "<title>Opening…</title>" +
-          "<script>location.replace(" +
-          JSON.stringify(url) +
-          ");</script>" +
-          "</head><body></body></html>"
-      );
-      w.document.close();
+        "<meta name=\"referrer\" content=\"no-referrer\">" +
+        "<title>Opening…</title>" +
+        "<style>html,body{margin:0;height:100%;background:#0b1220;color:#94a3b8;font:14px system-ui,sans-serif;display:flex;align-items:center;justify-content:center}</style>" +
+        "<script>location.replace(" +
+        JSON.stringify(url) +
+        ");</script></head><body><div>Opening booking…</div></body></html>";
+      const blob = new Blob([html], { type: "text/html" });
+      const blobUrl = URL.createObjectURL(blob);
+      const w = window.open(blobUrl, "_blank");
+      if (w) {
+        w.opener = null;
+        // Revoke after the new tab has loaded the blob
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+      } else {
+        URL.revokeObjectURL(blobUrl);
+      }
     } catch {
-      try {
-        w.location.replace(url);
-      } catch {
-        /* ignore */
+      const w = window.open("about:blank", "_blank");
+      if (w) {
+        w.opener = null;
+        try {
+          w.location.replace(url);
+        } catch {
+          /* ignore */
+        }
       }
     }
   };
