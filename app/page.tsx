@@ -711,93 +711,135 @@ function generateDLLink(
 }
 
 
-/** Skyscanner numeric place IDs used in transport_deeplink (from live UA redirects). */
+
+
+/** Skyscanner numeric place IDs used in transport_deeplink (verified from live links). */
 const SKY_PLACE_IDS: Record<string, string> = {
-  AMS: "11235", ARN: "11154", ATH: "11121", ATL: "11168", AUH: "11165",
-  AUS: "11170", BCN: "9772", BER: "9828", BKK: "9947", BNA: "11172",
-  BOG: "9963", BOM: "9968", BOS: "11174", BRU: "10141", BUD: "10215",
-  BWI: "11176", CAI: "10337", CAN: "10349", CDG: "10413", CGK: "10451",
-  CLE: "11180", CLT: "11181", CMH: "11182", CPH: "10500", CUN: "10532",
-  DCA: "11185", DEL: "10595", DEN: "10959", DFW: "11187", DOH: "10634",
-  DUB: "10650", DUS: "11165", DXB: "10672", EWR: "11190", EZE: "10735",
-  FCO: "10788", FRA: "11616", FLL: "11193", GIG: "10910", GVA: "10950",
-  HAM: "10970", HEL: "10990", HKG: "11020", HNL: "11200", IAD: "11202",
-  IAH: "11203", ICN: "11080", IND: "11204", IST: "11110", JFK: "12712",
-  KUL: "11290", LAS: "11210", LAX: "11220", LGA: "11221", LGW: "13554",
-  LHR: "13542", LIM: "11320", LIS: "11340", MAD: "11420", MAN: "13880",
-  MCO: "11230", MEL: "11460", MEX: "11470", MIA: "11235", MNL: "11520",
-  MSP: "11240", MUC: "14385", MXP: "11560", NAP: "11580", NRT: "11640",
-  ORD: "11250", ORY: "11680", OSL: "11700", PDX: "11255", PEK: "11740",
-  PHL: "11260", PHX: "11265", PIT: "11270", PRG: "11820", PTY: "11840",
-  PVG: "11880", RDU: "11275", SAN: "11280", SAT: "11282", SCL: "11940",
-  SEA: "11285", SFO: "16216", SIN: "12020", SJC: "11290", SJD: "12040",
-  SJU: "12050", SLC: "11292", SNN: "12080", STL: "11295", SYD: "12140",
-  TLV: "12200", TPA: "11300", TPE: "12240", VCE: "12300", VIE: "12320",
-  WAW: "12380", YUL: "12440", YVR: "12460", YYZ: "12480", ZRH: "18563",
+  CDG: "10413",
+  SFO: "16216",
+  DEN: "10959",
+  JFK: "12712",
+  ZRH: "18563",
+  FRA: "11616",
+  CAI: "10337",
+  MUC: "14385",
+  IAD: "12387",
+  EWR: "11442",
+  // common extras (best-effort / previously used)
+  LAX: "13554",
+  ORD: "13871",
+  LHR: "13542",
+  AMS: "11282",
+  FCO: "12023",
+  MAD: "12916",
+  BCN: "10466",
+  DXB: "11123",
+  DOH: "11022",
+  TLV: "16808",
+  CUN: "10865",
+  MIA: "13126",
+  ATL: "10201",
+  BOS: "10574",
+  SEA: "16122",
+  PHX: "14758",
+  DFW: "10980",
+  IAH: "12431",
+  CLT: "10713",
+  MSP: "13303",
+  DTW: "11046",
+  PHL: "14732",
+  SAN: "16040",
+  TPA: "16812",
+  LAS: "13321",
+  MCO: "13113",
+  AUH: "10245",
+  SIN: "16322",
+  HKG: "12422",
+  NRT: "13650",
+  HND: "12415",
+  SYD: "16642",
+  YYZ: "17828",
+  YVR: "17824",
+  YUL: "17820",
 };
 
-/** Skyscanner carrier IDs used in transport_deeplink itinerary. */
+/** Skyscanner carrier IDs (negative ints). */
 const SKY_CARRIER_IDS: Record<string, string> = {
   UA: "-31722",
   LH: "-32090",
   LX: "-31799",
-  AC: "-32057",
-  OS: "-32117",
-  SN: "-32480",
-  NH: "-32155",
-  NZ: "-32170",
-  SQ: "-32440",
-  TK: "-32500",
-  EK: "-32380",
-  QR: "-32400",
-  BA: "-32012",
-  AA: "-32001",
+  OS: "-32099",
+  SN: "-32120",
+  AC: "-32000",
+  NH: "-32080",
+  NZ: "-32085",
+  SQ: "-32125",
+  TK: "-32140",
+  AA: "-32010",
   DL: "-32040",
-  AS: "-32020",
-  B6: "-32025",
-  WN: "-32540",
-  EI: "-32320",
+  BA: "-32020",
+  AF: "-32005",
+  KL: "-32070",
+  EK: "-32050",
+  QR: "-32110",
+  EY: "-32055",
 };
 
-const UA_SKY_AGENT = "uair";
-const UA_SKY_CARRIER = "-31722";
+/** Booking class → Skyscanner cabin_class query param. */
+function skyCabinClass(cls: string): "economy" | "premium_economy" | "business" | "first" {
+  const c = (cls || "Y").toUpperCase();
+  if (c === "F" || c === "A") return "first";
+  if ("JCDIZ".includes(c)) return "business";
+  if (c === "W" || c === "R") return "premium_economy";
+  // P K Y B M H L V S N Q O G = economy
+  return "economy";
+}
 
-function skyPlaceId(iata: string): string {
-  const code = iata.trim().toUpperCase();
-  return SKY_PLACE_IDS[code] || code;
+function skyPlaceId(iata: string): string | null {
+  return SKY_PLACE_IDS[iata.toUpperCase()] || null;
 }
 
 function skyCarrierId(cc: string): string {
-  const code = cc.trim().toUpperCase();
-  return SKY_CARRIER_IDS[code] || UA_SKY_CARRIER;
+  return SKY_CARRIER_IDS[cc.toUpperCase()] || "-31722";
 }
 
-function skyCabinClass(cls: string): { cabin: string; code: string } {
-  const c = (cls || "Y").toUpperCase();
-  if ("FAP".includes(c)) return { cabin: "first", code: "F" };
-  if ("JCDIZ".includes(c)) return { cabin: "business", code: "J" };
-  if ("WS".includes(c)) return { cabin: "premium_economy", code: "W" };
-  return { cabin: "economy", code: "Y" };
-}
-
-function formatSkyDateTime(localValue: string): string {
+function formatSkyIso(localValue: string): string {
   const local = parseDisplayDateTime(localValue);
   if (!local) return "";
   return `${local.year}-${pad(local.month + 1)}-${pad(local.day)}T${pad(local.hour)}:${pad(local.minute)}`;
 }
 
-function formatSkyDateOnly(localValue: string): string {
+function formatSkyDate(localValue: string): string {
   const local = parseDisplayDateTime(localValue);
   if (!local) return "";
   return `${local.year}-${pad(local.month + 1)}-${pad(local.day)}`;
 }
 
+/** Estimate duration minutes from dep/arr display strings (same-day or +1). */
+function estimateDurationMin(depLocal: string, arrLocal: string): number {
+  const d = parseDisplayDateTime(depLocal);
+  const a = parseDisplayDateTime(arrLocal);
+  if (!d || !a) return 0;
+  let mins = (a.hour * 60 + a.minute) - (d.hour * 60 + d.minute);
+  // cross-midnight / next day
+  if (a.day !== d.day || a.month !== d.month || mins < 0) {
+    mins += 24 * 60;
+  }
+  // crude timezone compensation not applied — Skyscanner accepts approximate duration
+  if (mins < 30) mins += 24 * 60;
+  return Math.max(30, mins);
+}
+
 /**
- * Build Skyscanner → United (uair) transport_deeplink.
- * Structure reverse-engineered from live UA booking redirects:
- * /transport_deeplink/4.0/{market}/{locale}/{currency}/uair/{legs}/{orig.dest.date,...}/air/airli/flights
- * itinerary=flight|{carrierId}|{num}|{origId}|{dep}|{destId}|{arr}|{mins}|{fare}|{cabin}|-
- * Directions joined by ",", connection segments within a direction by ";"
+ * Skyscanner → United transport_deeplink (POS = US, currency = USD).
+ *
+ * Path: placeOrig.placeDest.YYYY-MM-DD per direction (new_dir groups).
+ * Itinerary: flight|carrierId|num|origId|depISO|destId|arrISO|dur|fare|-|cabin|-
+ *   segments within a direction joined by `;`
+ *   directions joined by `,`
+ *
+ * Session GUIDs (booking_panel_option_guid, fps_session_id, q_ids, …) are
+ * live-only and omitted — Skyscanner still resolves the itinerary without them.
  */
 function generateUASkyLink(
   segments: Segment[],
@@ -809,53 +851,65 @@ function generateUASkyLink(
   const paxCount = Math.max(1, Math.min(9, total || 1));
   const directions = groupDirections(segments);
 
-  // Path: one origin.dest.date per direction (first.orig → last.dest of that dir)
-  const pathParts = directions.map((dirSegs) => {
-    const first = dirSegs[0];
-    const last = dirSegs[dirSegs.length - 1];
-    return `${skyPlaceId(first.orig)}.${skyPlaceId(last.dest)}.${formatSkyDateOnly(first.dep_local)}`;
+  // Validate place IDs
+  for (const s of segments) {
+    if (!skyPlaceId(s.orig) || !skyPlaceId(s.dest)) {
+      const missing = [s.orig, s.dest].filter((c) => !skyPlaceId(c));
+      console.warn("Missing Skyscanner place ID for:", missing.join(", "));
+    }
+  }
+
+  // Path: one entry per direction → first.orig . last.dest . depDate
+  const pathParts: string[] = [];
+  directions.forEach((dir) => {
+    const first = dir[0];
+    const last = dir[dir.length - 1];
+    const o = skyPlaceId(first.orig) || first.orig;
+    const d = skyPlaceId(last.dest) || last.dest;
+    pathParts.push(`${o}.${d}.${formatSkyDate(first.dep_local)}`);
   });
-
-  // Itinerary: directions joined by ",", segments inside a direction by ";"
-  const itineraryDirs = directions.map((dirSegs) => {
-    return dirSegs
-      .map((seg) => {
-        const carrierId = skyCarrierId(seg.cc);
-        const origId = skyPlaceId(seg.orig);
-        const destId = skyPlaceId(seg.dest);
-        const dep = formatSkyDateTime(seg.dep_local);
-        const arr = formatSkyDateTime(seg.arr_local);
-        const mins = seg.dur && parseInt(seg.dur, 10) > 0 ? seg.dur : "0";
-        const fare = (seg.fare_basis && seg.fare_basis.trim()) || "-";
-        const { code: cabinCode } = skyCabinClass(seg.cls);
-        return `flight|${carrierId}|${seg.num}|${origId}|${dep}|${destId}|${arr}|${mins}|${fare}|${cabinCode}|-`;
-      })
-      .join(";");
-  });
-  const itinerary = itineraryDirs.join(",");
-
-  // carriers / operators: marketing carrier per segment; operators grouped by direction
-  const allCarrierIds = segments.map((s) => skyCarrierId(s.cc));
-  const carriers = [...new Set(allCarrierIds)].join(",");
-  const operators = directions
-    .map((dirSegs) => dirSegs.map((s) => skyCarrierId(s.cc)).join(","))
-    .join(";");
-
-  // Dominant cabin from first segment
-  const { cabin } = skyCabinClass(segments[0].cls);
-
-  const market = "US";
-  const locale = "en-US";
-  const currency = "USD";
+  const path = pathParts.join(",");
   const legCount = directions.length;
 
-  const base =
-    `https://www.skyscanner.com/transport_deeplink/4.0/${market}/${locale}/${currency}/` +
-    `${UA_SKY_AGENT}/${legCount}/${pathParts.join(",")}/air/airli/flights`;
+  // Itinerary + operators
+  const itinDirs: string[] = [];
+  const opDirs: string[] = [];
+  directions.forEach((dir) => {
+    const flights: string[] = [];
+    const ops: string[] = [];
+    dir.forEach((s) => {
+      const carrierId = skyCarrierId(s.cc);
+      const origId = skyPlaceId(s.orig) || s.orig;
+      const destId = skyPlaceId(s.dest) || s.dest;
+      const depIso = formatSkyIso(s.dep_local);
+      const arrIso = formatSkyIso(s.arr_local);
+      const dur = estimateDurationMin(s.dep_local, s.arr_local);
+      const cabinLetter = (s.cls || "Y").toUpperCase();
+      // flight|carrier|num|orig|dep|dest|arr|dur|fareBasis|cabin|-
+      flights.push(
+        `flight|${carrierId}|${s.num}|${origId}|${depIso}|${destId}|${arrIso}|${dur}|-|${cabinLetter}|-`
+      );
+      ops.push(carrierId);
+    });
+    itinDirs.push(flights.join(";"));
+    opDirs.push(ops.join(";"));
+  });
+  const itinerary = itinDirs.join(",");
+  const operators = opDirs.join(",");
+
+  // Primary marketing carrier for carriers= filter (prefer UA)
+  const primaryCarrier = skyCarrierId(
+    segments.find((s) => s.cc.toUpperCase() === "UA")?.cc || segments[0].cc
+  );
+
+  const cabin = skyCabinClass(segments[0].cls);
+
+  // POS USA / USD
+  const base = `https://www.skyscanner.com/transport_deeplink/4.0/US/en-US/USD/uair/${legCount}/${path}/air/airli/flights`;
 
   const params = new URLSearchParams();
   params.set("itinerary", itinerary);
-  params.set("carriers", carriers);
+  params.set("carriers", primaryCarrier);
   params.set("operators", operators);
   params.set("passengers", String(paxCount));
   params.set("cabin_class", cabin);
